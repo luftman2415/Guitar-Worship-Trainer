@@ -1,0 +1,7 @@
+{
+  "name": "Guitar Worship Trainer Pro",
+  "description": "Herramienta integral para guitarristas: Afinador, Metrónomo, Setlists y Teoría Musical.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
