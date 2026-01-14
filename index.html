@@ -561,10 +561,10 @@
                     direction: 'asc'
                 },
                 3: { 
-                    name: "Nivel 3: Maestro (Descendente)", 
-                    desc: "Todos los intervalos en dirección descendente. El reto final.",
+                    name: "Nivel 3: Maestro (Mix)", 
+                    desc: "Todos los intervalos. Dirección aleatoria (Ascendente/Descendente).",
                     types: ['All'],
-                    direction: 'desc'
+                    direction: 'random'
                 }
             };
 
@@ -593,14 +593,20 @@
                 // Frecuencia base aleatoria (C4 a C5)
                 const rootFreq = 261.63 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
                 
+                // Lógica de dirección (Aleatoria para nivel 3)
+                let dir = config.direction;
+                if (dir === 'random') {
+                    dir = Math.random() < 0.5 ? 'asc' : 'desc';
+                }
+                
                 setCurrentInterval({
                     ...target,
                     rootFreq,
-                    direction: config.direction
+                    direction: dir
                 });
 
                 // Reproducir automáticamente al generar (pequeño delay para UX y para que el render esté listo)
-                setTimeout(() => playInterval(rootFreq, target.semitones, config.direction), 400);
+                setTimeout(() => playInterval(rootFreq, target.semitones, dir), 400);
             };
 
             const playInterval = async (rootFreq, semitones, direction) => {

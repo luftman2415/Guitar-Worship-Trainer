@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v5'; // Parche de estabilidad
+const CACHE_NAME = 'gwt-pro-v6'; // Nivel 3 Aleatorio
 const STATIC_ASSETS = [
   './',
   './index.html',
