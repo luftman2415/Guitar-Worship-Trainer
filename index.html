@@ -10,7 +10,6 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- USAR ICONO LOCAL PARA APPLE TAMBIÉN -->
     <link rel="apple-touch-icon" href="icon-192.png">
     
     <!-- Favicon GW -->
@@ -20,7 +19,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
 
     <!-- Fuente -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -28,7 +27,6 @@
     <style>
       body { font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
       
-      /* Animaciones */
       @keyframes pulse-ring {
         0% { transform: scale(0.33); }
         80%, 100% { opacity: 0; }
@@ -47,7 +45,6 @@
         animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         opacity: 0.6;
       }
-      /* Animación roja para grabación */
       .animate-pulse-ring-red:before {
         content: '';
         position: absolute;
@@ -74,18 +71,36 @@
         animation: fade-in-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       
-      /* Scrollbars */
       ::-webkit-scrollbar { width: 6px; height: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
       .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-      /* Ocultar scrollbar en elementos especificos pero permitir scroll */
       .no-scrollbar::-webkit-scrollbar { display: none; }
       .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       
-      /* Circle of Fifths Rotate transition */
       .wheel-transition { transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+      
+      /* Input Range Customization */
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #4f46e5;
+        margin-top: -6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+      .dark input[type=range]::-webkit-slider-runnable-track {
+        background: #475569;
+      }
     </style>
 
     <script>
@@ -100,7 +115,6 @@
             }
         }
         
-        // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
@@ -114,9 +128,30 @@
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
     <div id="root"></div>
 
-    <!-- LÓGICA DE LA APLICACIÓN -->
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+        // --- Error Boundary ---
+        class ErrorBoundary extends React.Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            componentDidCatch(error, errorInfo) { console.error("GW Error:", error, errorInfo); }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center p-6 text-center bg-slate-50 dark:bg-slate-900">
+                            <div className="max-w-md bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl">
+                                <div className="text-red-500 text-5xl mb-4">⚠️</div>
+                                <h2 className="text-xl font-bold mb-2 dark:text-white">Algo salió mal</h2>
+                                <p className="text-slate-500 mb-6 text-sm">Se ha detectado un error inesperado.</p>
+                                <button onClick={() => window.location.reload()} className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-brand-700 transition-colors w-full">Recargar Aplicación</button>
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
 
         // --- ICONOS ---
         const Icon = ({ name, size = 24, className = "" }) => {
@@ -148,23 +183,29 @@
                 circle: <circle cx="12" cy="12" r="10"></circle>,
                 download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>,
                 upload: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>,
-                layers: <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>,
-                repeat: <polyline points="17 1 21 5 17 9"></polyline>
+                layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
+                 repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
+                 lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
+                 file: <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>,
+                 rewind: <polygon points="11 19 2 12 11 5 11 19"></polygon>
             };
-            
+
             const extras = {
-                 award: <><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></>,
-                 clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
-                 x: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
-                 analyze: <><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></>,
-                 alert: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
-                 book: <><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>,
-                 ear: <><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M2 14h3v7H2z"/><path d="M19 14h3v7h-3z"/></>,
-                 circle: <><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></>,
-                 download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
-                 upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
-                 layers: <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>,
-                 repeat: <><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>
+                 award: <g><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></g>,
+                 clock: <g><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>,
+                 x: <g><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>,
+                 analyze: <g><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></g>,
+                 alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>,
+                 book: <g><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>,
+                 ear: <g><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M2 14h3v7H2z"/><path d="M19 14h3v7h-3z"/></g>,
+                 circle: <g><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></g>,
+                 download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></g>,
+                 upload: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></g>,
+                 layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
+                 repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
+                 lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
+                 file: <g><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></g>,
+                 rewind: <g><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></g>
             };
 
             return (
@@ -174,7 +215,6 @@
             );
         };
 
-        // --- UTILS: INDEXED DB (Para Grabadora) ---
         const DB_NAME = 'gwt_audio_db';
         const DB_STORE = 'recordings';
 
@@ -225,8 +265,6 @@
             });
         };
 
-
-        // --- SISTEMA DE DIÁLOGOS PERSONALIZADOS (MODAL) ---
         const DialogContext = createContext();
 
         const DialogProvider = ({ children }) => {
@@ -305,9 +343,7 @@
 
         const useDialog = () => useContext(DialogContext);
 
-
         const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-        
         const SCALES = {
             'Mayor (Jónica)': [0, 2, 4, 5, 7, 9, 11],
             'Dórica': [0, 2, 3, 5, 7, 9, 10],
@@ -320,7 +356,6 @@
             'Pentatónica Mayor': [0, 2, 4, 7, 9],
             'Blues': [0, 3, 5, 6, 7, 10],
         };
-        
         const CHORD_FORMULAS = [
             { name: "Mayor", formula: "1 - 3 - 5", example: "C - E - G" },
             { name: "Menor", formula: "1 - b3 - 5", example: "C - Eb - G" },
@@ -350,12 +385,10 @@
             return { getContext, resume };
         };
 
-        // --- COMPONENTE: PROGRESO (Stats Fix) ---
         const ProgressStats = () => {
             const [stats, setStats] = useState({ streak: 0, totalMinutes: 0, lastDate: null });
             const dialog = useDialog();
             
-            // Escuchar evento personalizado para actualizar
             useEffect(() => {
                 loadStats();
                 const handleUpdate = () => loadStats();
@@ -366,7 +399,6 @@
             const loadStats = () => {
                 const savedRaw = localStorage.getItem('gwt_stats');
                 const saved = savedRaw ? JSON.parse(savedRaw) : { streak: 0, totalMinutes: 0, lastDate: null };
-                // Mostrar datos guardados. La lógica de romper la racha se maneja al "loguear" tiempo.
                 setStats(saved);
             };
 
@@ -396,13 +428,11 @@
                             <span className="text-xs text-slate-500 font-medium">Minutos totales</span>
                         </div>
                     </div>
-                    {/* Botón de reinicio más visible en móviles */}
                     <button onClick={resetStats} className="absolute -top-3 -right-3 p-2 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-500 shadow-sm" title="Reiniciar estadísticas"><Icon name="trash" size={14} /></button>
                 </div>
             );
         };
 
-        // --- GLOBAL LOGIC: STATS FIX ---
         const logPracticeTime = (minutes) => {
             const raw = localStorage.getItem('gwt_stats');
             const saved = raw ? JSON.parse(raw) : { streak: 0, totalMinutes: 0, lastDate: null };
@@ -410,20 +440,18 @@
             const today = new Date().toDateString();
             let newStreak = saved.streak;
             
-            // Lógica robusta de Rachas
             if (saved.lastDate !== today) {
                 if (!saved.lastDate) {
-                    newStreak = 1; // Primer día
+                    newStreak = 1;
                 } else {
                     const last = new Date(saved.lastDate);
                     const yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
                     
-                    // Comparamos cadenas de fecha para evitar problemas de hora
                     if (last.toDateString() === yesterday.toDateString()) {
                         newStreak += 1;
                     } else {
-                        newStreak = 1; // Racha rota
+                        newStreak = 1;
                     }
                 }
             }
@@ -435,11 +463,9 @@
             };
             
             localStorage.setItem('gwt_stats', JSON.stringify(newStats));
-            // Disparar evento para actualizar UI inmediatamente
             window.dispatchEvent(new Event('gwt-stats-updated'));
         };
 
-        // --- COMPONENTS: CHORD ANALYZER ---
         const ChordAnalyzer = () => {
             const [input, setInput] = useState('');
             const [analysis, setAnalysis] = useState(null);
@@ -518,19 +544,15 @@
             );
         };
 
-        // --- COMPONENTE: EAR TRAINER (JUEGO POR NIVELES) ---
         const EarTrainer = () => {
             const { resume, getContext } = useAudioContext();
-            
-            // --- ESTADOS ---
-            const [gameState, setGameState] = useState('menu'); // 'menu' | 'quiz' | 'level_complete' | 'level_failed'
+            const [gameState, setGameState] = useState('menu'); 
             const [level, setLevel] = useState(1);
-            const [questionCount, setQuestionCount] = useState(0); // 0 to 10
+            const [questionCount, setQuestionCount] = useState(0); 
             const [isPlaying, setIsPlaying] = useState(false);
             const [currentInterval, setCurrentInterval] = useState(null);
-            const [lastError, setLastError] = useState(null); // Para mostrar qué era cuando fallas
+            const [lastError, setLastError] = useState(null); 
             
-            // --- CONFIGURACIÓN DE NIVELES ---
             const ALL_INTERVALS = [
                 { id: 'P1', name: "Unísono", semitones: 0 },
                 { id: 'm2', name: "2da Menor", semitones: 1 },
@@ -570,10 +592,8 @@
 
             const QUESTIONS_PER_LEVEL = 10;
 
-            // --- LÓGICA DE JUEGO ---
-
             const startLevel = async (lvl) => {
-                await resume(); // Asegurar que el contexto de audio esté activo al toque del usuario
+                await resume();
                 setLevel(lvl);
                 setQuestionCount(0);
                 setLastError(null);
@@ -586,14 +606,9 @@
                 let possibleIds = config.types;
                 if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id);
 
-                // Filtrar objetos completos
                 const pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id));
                 const target = pool[Math.floor(Math.random() * pool.length)];
-
-                // Frecuencia base aleatoria (C4 a C5)
                 const rootFreq = 261.63 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
-                
-                // Lógica de dirección (Aleatoria para nivel 3)
                 let dir = config.direction;
                 if (dir === 'random') {
                     dir = Math.random() < 0.5 ? 'asc' : 'desc';
@@ -605,14 +620,12 @@
                     direction: dir
                 });
 
-                // Reproducir automáticamente al generar (pequeño delay para UX y para que el render esté listo)
                 setTimeout(() => playInterval(rootFreq, target.semitones, dir), 400);
             };
 
             const playInterval = async (rootFreq, semitones, direction) => {
                 if (isPlaying) return;
                 setIsPlaying(true);
-                // El resume() ya se llamó en startLevel, pero no está de más aquí
                 const ctx = getContext();
                 if (!ctx) return;
                 
@@ -633,7 +646,6 @@
                 const targetFreq = rootFreq * Math.pow(2, semitones / 12);
                 const now = ctx.currentTime;
                 
-                // Lógica Ascendente vs Descendente
                 if (direction === 'asc') {
                     playTone(rootFreq, now, 0.6);
                     playTone(targetFreq, now + 0.8, 0.8);
@@ -649,7 +661,6 @@
                 if (!currentInterval) return;
 
                 if (selectedId === currentInterval.id) {
-                    // CORRECTO
                     const nextCount = questionCount + 1;
                     setQuestionCount(nextCount);
                     if (nextCount >= QUESTIONS_PER_LEVEL) {
@@ -658,155 +669,80 @@
                         generateQuestion(level);
                     }
                 } else {
-                    // INCORRECTO (Modo estricto)
                     setLastError(currentInterval);
                     setGameState('level_failed');
                 }
             };
 
-            // --- RENDERIZADO ---
-
-            if (gameState === 'menu') {
-                return (
-                    <div className="max-w-lg mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
-                        <div className="p-4 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-full mb-6 text-fuchsia-600 inline-block">
-                            <Icon name="ear" size={48} />
-                        </div>
-                        <h2 className="text-3xl font-bold mb-2 dark:text-white">Entrenador Auditivo</h2>
-                        <p className="text-slate-500 dark:text-slate-400 mb-8">Perfecciona tu oído. Debes acertar 10/10 para avanzar.</p>
-                        
-                        <div className="space-y-4">
-                            {[1, 2, 3].map(lvl => (
-                                <button 
-                                    key={lvl}
-                                    onClick={() => startLevel(lvl)}
-                                    className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden"
-                                >
-                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <Icon name="play" size={60} className="text-fuchsia-500" />
-                                    </div>
-                                    <h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{LEVELS[lvl].name}</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pr-8">{LEVELS[lvl].desc}</p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                );
-            }
-
-            if (gameState === 'level_failed') {
-                return (
-                    <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal">
-                        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Icon name="x" size={40} />
-                        </div>
-                        <h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Fallado!</h2>
-                        <p className="text-slate-500 mb-6">
-                            El intervalo correcto era: <span className="font-bold text-slate-800 dark:text-white">{lastError?.name}</span>.
-                        </p>
-                        <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl mb-6 text-sm italic text-slate-600 dark:text-slate-300">
-                            "La constancia es clave. Vuelve a intentarlo para perfeccionar tu oído."
-                        </div>
-                        <button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl hover:opacity-90">
-                            Volver al Menú
-                        </button>
-                    </div>
-                );
-            }
-
-            if (gameState === 'level_complete') {
-                return (
-                    <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal">
-                        <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Icon name="award" size={40} />
-                        </div>
-                        <h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Completado!</h2>
-                        <p className="text-emerald-600 font-bold mb-6 text-xl">10 / 10 Perfecto</p>
-                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl mb-6 text-sm italic text-emerald-800 dark:text-emerald-200">
-                            "¡Excelente trabajo! Tu oído está afinándose. ¿Listo para el siguiente desafío?"
-                        </div>
-                        <div className="space-y-3">
-                            {level < 3 && (
-                                <button onClick={() => startLevel(level + 1)} className="w-full py-4 bg-fuchsia-600 text-white font-bold rounded-xl hover:bg-fuchsia-700 shadow-lg animate-pulse-ring">
-                                    Siguiente Nivel
-                                </button>
-                            )}
-                            <button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl">
-                                Menú Principal
-                            </button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // --- QUIZ VIEW ---
-            
-            // Protección vital contra errores de renderizado si el estado no está listo
-            if (!currentInterval) return null;
-
-            // Obtener botones de respuesta según el nivel
-            let currentOptions = [];
-            const config = LEVELS[level];
-            if (config.types[0] === 'All') {
-                currentOptions = ALL_INTERVALS;
-            } else {
-                currentOptions = ALL_INTERVALS.filter(i => config.types.includes(i.id));
-            }
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
-                    {/* Header: Progress & Exit */}
-                    <div className="flex justify-between items-center mb-6">
-                        <button onClick={() => setGameState('menu')} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={20}/></button>
-                        <div className="flex flex-col items-center">
-                            <span className="text-xs font-bold text-fuchsia-500 uppercase tracking-widest">{LEVELS[level].name.split(':')[0]}</span>
-                            <div className="text-sm font-bold dark:text-white">Progreso: {questionCount} / {QUESTIONS_PER_LEVEL}</div>
-                        </div>
-                        <div className="w-5"></div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden">
-                        <div className="bg-fuchsia-500 h-full transition-all duration-300" style={{ width: `${(questionCount / QUESTIONS_PER_LEVEL) * 100}%` }}></div>
-                    </div>
-
-                    {/* Play Button */}
-                    <button 
-                        onClick={() => playInterval(currentInterval.rootFreq, currentInterval.semitones, currentInterval.direction)}
-                        className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}
-                    >
-                        <Icon name="ear" size={48} fill="currentColor" />
-                    </button>
-                    <p className="text-slate-400 text-xs mb-6">Toca para escuchar de nuevo</p>
-
-                    {/* Options Grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                        {currentOptions.map((opt) => (
-                            <button
-                                key={opt.id}
-                                onClick={() => handleAnswer(opt.id)}
-                                className="p-4 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 dark:text-white transition-all active:scale-95"
-                            >
-                                {opt.name}
+            if (gameState === 'menu') return (
+                <div className="max-w-lg mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
+                    <div className="p-4 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-full mb-6 text-fuchsia-600 inline-block"><Icon name="ear" size={48} /></div>
+                    <h2 className="text-3xl font-bold mb-2 dark:text-white">Entrenador Auditivo</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8">Perfecciona tu oído. Debes acertar 10/10 para avanzar.</p>
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(lvl => (
+                            <button key={lvl} onClick={() => startLevel(lvl)} className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name="play" size={60} className="text-fuchsia-500" /></div>
+                                <h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{LEVELS[lvl].name}</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pr-8">{LEVELS[lvl].desc}</p>
                             </button>
                         ))}
                     </div>
                 </div>
             );
+
+            if (gameState === 'level_failed') return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal">
+                    <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="x" size={40} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Fallado!</h2>
+                    <p className="text-slate-500 mb-6">El intervalo correcto era: <span className="font-bold text-slate-800 dark:text-white">{lastError?.name}</span>.</p>
+                    <button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl hover:opacity-90">Volver al Menú</button>
+                </div>
+            );
+
+            if (gameState === 'level_complete') return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal">
+                    <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="award" size={40} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Completado!</h2>
+                    <p className="text-emerald-600 font-bold mb-6 text-xl">10 / 10 Perfecto</p>
+                    <div className="space-y-3">
+                        {level < 3 && <button onClick={() => startLevel(level + 1)} className="w-full py-4 bg-fuchsia-600 text-white font-bold rounded-xl hover:bg-fuchsia-700 shadow-lg animate-pulse-ring">Siguiente Nivel</button>}
+                        <button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl">Menú Principal</button>
+                    </div>
+                </div>
+            );
+
+            if (!currentInterval) return null;
+
+            let currentOptions = [];
+            const config = LEVELS[level];
+            if (config.types[0] === 'All') currentOptions = ALL_INTERVALS;
+            else currentOptions = ALL_INTERVALS.filter(i => config.types.includes(i.id));
+
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
+                    <div className="flex justify-between items-center mb-6">
+                        <button onClick={() => setGameState('menu')} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={20}/></button>
+                        <div className="flex flex-col items-center"><span className="text-xs font-bold text-fuchsia-500 uppercase tracking-widest">{LEVELS[level].name.split(':')[0]}</span><div className="text-sm font-bold dark:text-white">Progreso: {questionCount} / {QUESTIONS_PER_LEVEL}</div></div>
+                        <div className="w-5"></div>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden"><div className="bg-fuchsia-500 h-full transition-all duration-300" style={{ width: `${(questionCount / QUESTIONS_PER_LEVEL) * 100}%` }}></div></div>
+                    <button onClick={() => playInterval(currentInterval.rootFreq, currentInterval.semitones, currentInterval.direction)} className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}><Icon name="ear" size={48} fill="currentColor" /></button>
+                    <p className="text-slate-400 text-xs mb-6">Toca para escuchar de nuevo</p>
+                    <div className="grid grid-cols-2 gap-3">{currentOptions.map((opt) => (<button key={opt.id} onClick={() => handleAnswer(opt.id)} className="p-4 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 dark:text-white transition-all active:scale-95">{opt.name}</button>))}</div>
+                </div>
+            );
         };
 
-        // --- COMPONENTS: FRETBOARD & THEORY STUDIO (Reemplazo completo) ---
         const ScaleStudio = () => {
             const [root, setRoot] = useState('C');
             const [scaleName, setScaleName] = useState('Mayor (Jónica)');
-            const [activeTab, setActiveTab] = useState('fretboard'); // fretboard, harmony, formulas
+            const [activeTab, setActiveTab] = useState('fretboard'); 
             const STRINGS = ['E', 'B', 'G', 'D', 'A', 'E'];
             const { getContext, resume } = useAudioContext();
 
-            // Frecuencias base de las cuerdas al aire (High E a Low E)
             const OPEN_STRING_FREQS = [329.63, 246.94, 196.00, 146.83, 110.00, 82.41];
 
-            // Generar notas de la escala seleccionada
             const getScaleNotes = () => {
                 const rootIndex = NOTES.indexOf(root);
                 const intervals = SCALES[scaleName];
@@ -824,11 +760,9 @@
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 
-                // Un sonido más parecido a una guitarra (diente de sierra filtrado)
                 osc.type = 'sawtooth';
                 osc.frequency.value = freq;
 
-                // Filtro para suavizar el sonido
                 const filter = ctx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.value = 1000;
@@ -837,34 +771,25 @@
                 filter.connect(gain);
                 gain.connect(ctx.destination);
 
-                // Envolvente (Attack rápido, Decay suave)
                 const now = ctx.currentTime;
                 gain.gain.setValueAtTime(0, now);
-                gain.gain.linearRampToValueAtTime(0.3, now + 0.02); // Attack
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5); // Release
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
 
                 osc.start(now);
                 osc.stop(now + 1.5);
             };
 
-            // Generar triadas (armonización) de la escala seleccionada
-            // Nota: Esto asume una construcción diatónica estándar (terceras superpuestas)
             const getHarmonization = () => {
                 const notes = getScaleNotes();
                 const harmonized = [];
-                // Para cada grado de la escala (0 a 6)
                 for (let i = 0; i < notes.length; i++) {
-                    if (scaleName.includes('Pentatónica') || scaleName.includes('Blues')) break; // No armonizamos pentatónicas de forma estándar aquí
+                    if (scaleName.includes('Pentatónica') || scaleName.includes('Blues')) break; 
 
                     const rootNote = notes[i];
                     const thirdNote = notes[(i + 2) % 7];
                     const fifthNote = notes[(i + 4) % 7];
                     
-                    // Determinar cualidad simple
-                    // Esto es una simplificación visual. 
-                    // Se podría calcular midiendo semitonos reales, pero para "estudio" básico mostramos las notas.
-                    
-                    // Cálculo real de intervalos para nombrar el acorde correctamente
                     const rootIdx = NOTES.indexOf(rootNote);
                     const thirdIdx = NOTES.indexOf(thirdNote);
                     const fifthIdx = NOTES.indexOf(fifthNote);
@@ -873,10 +798,10 @@
                     let fifthInterval = (fifthIdx - rootIdx + 12) % 12;
 
                     let quality = "";
-                    if (thirdInterval === 4 && fifthInterval === 7) quality = ""; // Mayor
-                    else if (thirdInterval === 3 && fifthInterval === 7) quality = "m"; // Menor
-                    else if (thirdInterval === 3 && fifthInterval === 6) quality = "dim"; // Disminuido
-                    else if (thirdInterval === 4 && fifthInterval === 8) quality = "aug"; // Aumentado
+                    if (thirdInterval === 4 && fifthInterval === 7) quality = ""; 
+                    else if (thirdInterval === 3 && fifthInterval === 7) quality = "m"; 
+                    else if (thirdInterval === 3 && fifthInterval === 6) quality = "dim"; 
+                    else if (thirdInterval === 4 && fifthInterval === 8) quality = "aug"; 
                     else quality = "?";
 
                     harmonized.push({ degree: i + 1, chord: rootNote + quality, notes: [rootNote, thirdNote, fifthNote] });
@@ -889,12 +814,8 @@
 
             return (
                 <div className="max-w-5xl mx-auto space-y-6">
-                    {/* Header y Controles */}
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                        <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center gap-2">
-                            <Icon name="grid" className="text-brand-500"/> Estudio de Escalas
-                        </h2>
-                        
+                        <h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white flex items-center gap-2"><Icon name="grid" className="text-brand-500"/> Estudio de Escalas</h2>
                         <div className="flex flex-col md:flex-row gap-4 mb-6">
                             <div className="flex-1">
                                 <label className="text-xs font-bold text-slate-500 uppercase ml-1">Tonalidad</label>
@@ -909,121 +830,37 @@
                                 </select>
                             </div>
                         </div>
-
-                        {/* Tabs */}
                         <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700 pb-1">
                             <button onClick={() => setActiveTab('fretboard')} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === 'fretboard' ? 'bg-slate-100 dark:bg-slate-700 text-brand-600 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Mástil</button>
                             <button onClick={() => setActiveTab('harmony')} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === 'harmony' ? 'bg-slate-100 dark:bg-slate-700 text-brand-600 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Armonización</button>
                             <button onClick={() => setActiveTab('formulas')} className={`px-4 py-2 font-bold text-sm rounded-t-lg transition-colors ${activeTab === 'formulas' ? 'bg-slate-100 dark:bg-slate-700 text-brand-600 dark:text-white' : 'text-slate-400 hover:text-slate-600'}`}>Fórmulas</button>
                         </div>
-
-                        {/* Contenido Dinámico */}
                         <div className="pt-6 min-h-[300px]">
-                            {/* VISTA 1: FRETBOARD */}
                             {activeTab === 'fretboard' && (
                                 <div className="animate-fade-in">
                                     <div className="overflow-x-auto pb-4">
                                         <div className="min-w-[700px] bg-[#3e3428] p-1 rounded-lg border-4 border-[#2b241c] relative shadow-inner select-none">
-                                            {/* Trastes / Marcadores */}
-                                            <div className="absolute inset-0 flex pointer-events-none">
-                                                {[...Array(13)].map((_, i) => (
-                                                    <div key={i} className={`flex-1 border-r ${i===0?'border-slate-400 border-r-4':'border-slate-500/50'} relative`}>
-                                                        {[3,5,7,9].includes(i) && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}
-                                                        {i===12 && <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}
-                                                        {i===12 && <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {/* Cuerdas y Notas */}
-                                            <div className="flex flex-col py-2 relative z-10">
-                                                {STRINGS.map((openNote, sIdx) => (
-                                                    <div key={sIdx} className="flex h-10 items-center relative">
-                                                        <div className="absolute w-full h-[2px] bg-[#a89f91] shadow-sm"></div>
-                                                        {[...Array(13)].map((_, fret) => {
-                                                            const note = NOTES[(NOTES.indexOf(openNote) + fret) % 12];
-                                                            const isRoot = note === root;
-                                                            return (
-                                                                <div key={fret} className="flex-1 flex justify-center relative z-20">
-                                                                    {activeNotes.includes(note) && (
-                                                                        <div 
-                                                                            onClick={() => playNote(sIdx, fret)}
-                                                                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition-all hover:scale-125 cursor-pointer active:scale-95
-                                                                            ${isRoot ? 'bg-rose-500 text-white ring-2 ring-white z-30 scale-110' : 'bg-brand-500 text-white hover:bg-brand-400'}`}
-                                                                            title={`Tocar ${note}`}
-                                                                        >
-                                                                            {note}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                            <div className="absolute inset-0 flex pointer-events-none">{[...Array(13)].map((_, i) => (<div key={i} className={`flex-1 border-r ${i===0?'border-slate-400 border-r-4':'border-slate-500/50'} relative`}>{[3,5,7,9].includes(i) && <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}{i===12 && <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}{i===12 && <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-400/30"></div>}</div>))}</div>
+                                            <div className="flex flex-col py-2 relative z-10">{STRINGS.map((openNote, sIdx) => (<div key={sIdx} className="flex h-10 items-center relative"><div className="absolute w-full h-[2px] bg-[#a89f91] shadow-sm"></div>{[...Array(13)].map((_, fret) => {const note = NOTES[(NOTES.indexOf(openNote) + fret) % 12];const isRoot = note === root;return (<div key={fret} className="flex-1 flex justify-center relative z-20">{activeNotes.includes(note) && (<div onClick={() => playNote(sIdx, fret)} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-md transition-all hover:scale-125 cursor-pointer active:scale-95 ${isRoot ? 'bg-rose-500 text-white ring-2 ring-white z-30 scale-110' : 'bg-brand-500 text-white hover:bg-brand-400'}`} title={`Tocar ${note}`}>{note}</div>)}</div>);})}</div>))}</div>
                                         </div>
                                     </div>
-                                    <div className="mt-4 flex gap-4 text-xs text-slate-500 justify-center items-center flex-wrap">
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-rose-500"></span> Tónica</div>
-                                        <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-brand-500"></span> Notas de la escala</div>
-                                        <div className="ml-4 text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded">¡Haz clic en las notas para oírlas! 🔊</div>
-                                    </div>
+                                    <div className="mt-4 flex gap-4 text-xs text-slate-500 justify-center items-center flex-wrap"><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-rose-500"></span> Tónica</div><div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-brand-500"></span> Notas de la escala</div><div className="ml-4 text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/20 px-2 py-1 rounded">¡Haz clic en las notas para oírlas! 🔊</div></div>
                                 </div>
                             )}
-
-                            {/* VISTA 2: ARMONIZACIÓN */}
                             {activeTab === 'harmony' && (
                                 <div className="animate-fade-in">
                                     {(scaleName.includes('Pentatónica') || scaleName.includes('Blues')) ? (
-                                        <div className="text-center p-8 text-slate-400 italic bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                                            Las escalas pentatónicas y blues no suelen armonizarse diatónicamente en triadas estándar de la misma forma que las escalas mayores/menores.
-                                        </div>
+                                        <div className="text-center p-8 text-slate-400 italic bg-slate-50 dark:bg-slate-900 rounded-2xl">Las escalas pentatónicas y blues no suelen armonizarse diatónicamente en triadas estándar de la misma forma que las escalas mayores/menores.</div>
                                     ) : (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                                            {harmony.map((h, i) => (
-                                                <div key={i} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl text-center border border-slate-100 dark:border-slate-700 hover:border-brand-500 transition-colors cursor-pointer group">
-                                                    <div className="text-xs text-slate-400 font-bold mb-1 uppercase tracking-widest">Grado {h.degree}</div>
-                                                    <div className="text-2xl font-black text-slate-800 dark:text-white mb-2 group-hover:text-brand-500">{h.chord}</div>
-                                                    <div className="flex justify-center gap-1">
-                                                        {h.notes.map((n, idx) => (
-                                                            <span key={idx} className="text-[10px] bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-500">{n}</span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">{harmony.map((h, i) => (<div key={i} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl text-center border border-slate-100 dark:border-slate-700 hover:border-brand-500 transition-colors cursor-pointer group"><div className="text-xs text-slate-400 font-bold mb-1 uppercase tracking-widest">Grado {h.degree}</div><div className="text-2xl font-black text-slate-800 dark:text-white mb-2 group-hover:text-brand-500">{h.chord}</div><div className="flex justify-center gap-1">{h.notes.map((n, idx) => (<span key={idx} className="text-[10px] bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600 text-slate-500">{n}</span>))}</div></div>))}</div>
                                     )}
-                                    <p className="mt-6 text-center text-sm text-slate-500 max-w-2xl mx-auto">
-                                        Estas son las triadas que se forman naturalmente usando solo las notas de la escala <b>{root} {scaleName}</b>.
-                                    </p>
+                                    <p className="mt-6 text-center text-sm text-slate-500 max-w-2xl mx-auto">Estas son las triadas que se forman naturalmente usando solo las notas de la escala <b>{root} {scaleName}</b>.</p>
                                 </div>
                             )}
-
-                            {/* VISTA 3: FÓRMULAS */}
                             {activeTab === 'formulas' && (
                                 <div className="animate-fade-in">
-                                    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-                                        <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
-                                            <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-700 dark:text-slate-200">
-                                                <tr>
-                                                    <th className="px-6 py-3">Tipo de Acorde</th>
-                                                    <th className="px-6 py-3">Fórmula (Intervalos)</th>
-                                                    <th className="px-6 py-3">Ejemplo (en C)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {CHORD_FORMULAS.map((formula, idx) => (
-                                                    <tr key={idx} className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                                                        <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{formula.name}</td>
-                                                        <td className="px-6 py-4 font-mono text-brand-600 dark:text-brand-400 font-bold">{formula.formula}</td>
-                                                        <td className="px-6 py-4">{formula.example}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <p className="mt-4 text-xs text-slate-400 text-center">
-                                        Los números representan los intervalos desde la tónica (1). b3 = Tercera menor, #5 = Quinta aumentada, etc.
-                                    </p>
+                                    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700"><table className="w-full text-sm text-left text-slate-500 dark:text-slate-400"><thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-700 dark:text-slate-200"><tr><th className="px-6 py-3">Tipo de Acorde</th><th className="px-6 py-3">Fórmula (Intervalos)</th><th className="px-6 py-3">Ejemplo (en C)</th></tr></thead><tbody>{CHORD_FORMULAS.map((formula, idx) => (<tr key={idx} className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"><td className="px-6 py-4 font-bold text-slate-900 dark:text-white">{formula.name}</td><td className="px-6 py-4 font-mono text-brand-600 dark:text-brand-400 font-bold">{formula.formula}</td><td className="px-6 py-4">{formula.example}</td></tr>))}</tbody></table></div>
+                                    <p className="mt-4 text-xs text-slate-400 text-center">Los números representan los intervalos desde la tónica (1). b3 = Tercera menor, #5 = Quinta aumentada, etc.</p>
                                 </div>
                             )}
                         </div>
@@ -1032,44 +869,13 @@
             );
         };
 
-        // --- COMPONENTE: CIRCULO DE QUINTAS (CORREGIDO MANUALMENTE Y VISUALMENTE) ---
         const CircleOfFifths = () => {
             const [selectedKey, setSelectedKey] = useState('C');
-            
-            const WHEEL_ITEMS = [
-                { label: 'C', idx: 0 }, 
-                { label: 'G', idx: 1 }, 
-                { label: 'D', idx: 2 }, 
-                { label: 'A', idx: 3 }, 
-                { label: 'E', idx: 4 }, 
-                { label: 'B', idx: 5 }, 
-                { label: 'Gb', idx: 6 }, 
-                { label: 'Db', idx: 7 }, 
-                { label: 'Ab', idx: 8 }, 
-                { label: 'Eb', idx: 9 }, 
-                { label: 'Bb', idx: 10 }, 
-                { label: 'F', idx: 11 } 
-            ];
-
+            const WHEEL_ITEMS = [{ label: 'C', idx: 0 }, { label: 'G', idx: 1 }, { label: 'D', idx: 2 }, { label: 'A', idx: 3 }, { label: 'E', idx: 4 }, { label: 'B', idx: 5 }, { label: 'Gb', idx: 6 }, { label: 'Db', idx: 7 }, { label: 'Ab', idx: 8 }, { label: 'Eb', idx: 9 }, { label: 'Bb', idx: 10 }, { label: 'F', idx: 11 }];
             const getKeyDetails = (root) => {
-                const details = {
-                    'C':  { sub: 'F', subMin: 'Dm', dom: 'G', domMin: 'Em', min: 'Am', sharps: '0' },
-                    'G':  { sub: 'C', subMin: 'Am', dom: 'D', domMin: 'Bm', min: 'Em', sharps: '1 ♯' },
-                    'D':  { sub: 'G', subMin: 'Em', dom: 'A', domMin: 'F#m', min: 'Bm', sharps: '2 ♯' },
-                    'A':  { sub: 'D', subMin: 'Bm', dom: 'E', domMin: 'C#m', min: 'F#m', sharps: '3 ♯' },
-                    'E':  { sub: 'A', subMin: 'F#m', dom: 'B', domMin: 'G#m', min: 'C#m', sharps: '4 ♯' },
-                    'B':  { sub: 'E', subMin: 'C#m', dom: 'F#', domMin: 'D#m', min: 'G#m', sharps: '5 ♯' }, 
-                    'F#': { sub: 'B', subMin: 'G#m', dom: 'C#', domMin: 'A#m', min: 'D#m', sharps: '6 ♯' },
-                    'Gb': { sub: 'Cb', subMin: 'Abm', dom: 'Db', domMin: 'Bbm', min: 'Ebm', sharps: '6 ♭', flat: true },
-                    'Db': { sub: 'Gb', subMin: 'Ebm', dom: 'Ab', domMin: 'Fm', min: 'Bbm', sharps: '5 ♭', flat: true },
-                    'Ab': { sub: 'Db', subMin: 'Bbm', dom: 'Eb', domMin: 'Cm', min: 'Fm', sharps: '4 ♭', flat: true },
-                    'Eb': { sub: 'Ab', subMin: 'Fm', dom: 'Bb', domMin: 'Gm', min: 'Cm', sharps: '3 ♭', flat: true },
-                    'Bb': { sub: 'Eb', subMin: 'Cm', dom: 'F', domMin: 'Dm', min: 'Gm', sharps: '2 ♭', flat: true },
-                    'F':  { sub: 'Bb', subMin: 'Gm', dom: 'C', domMin: 'Am', min: 'Dm', sharps: '1 ♭', flat: true }
-                };
+                const details = { 'C':  { sub: 'F', subMin: 'Dm', dom: 'G', domMin: 'Em', min: 'Am', sharps: '0' }, 'G':  { sub: 'C', subMin: 'Am', dom: 'D', domMin: 'Bm', min: 'Em', sharps: '1 ♯' }, 'D':  { sub: 'G', subMin: 'Em', dom: 'A', domMin: 'F#m', min: 'Bm', sharps: '2 ♯' }, 'A':  { sub: 'D', subMin: 'Bm', dom: 'E', domMin: 'C#m', min: 'F#m', sharps: '3 ♯' }, 'E':  { sub: 'A', subMin: 'F#m', dom: 'B', domMin: 'G#m', min: 'C#m', sharps: '4 ♯' }, 'B':  { sub: 'E', subMin: 'C#m', dom: 'F#', domMin: 'D#m', min: 'G#m', sharps: '5 ♯' }, 'F#': { sub: 'B', subMin: 'G#m', dom: 'C#', domMin: 'A#m', min: 'D#m', sharps: '6 ♯' }, 'Gb': { sub: 'Cb', subMin: 'Abm', dom: 'Db', domMin: 'Bbm', min: 'Ebm', sharps: '6 ♭', flat: true }, 'Db': { sub: 'Gb', subMin: 'Ebm', dom: 'Ab', domMin: 'Fm', min: 'Bbm', sharps: '5 ♭', flat: true }, 'Ab': { sub: 'Db', subMin: 'Bbm', dom: 'Eb', domMin: 'Cm', min: 'Fm', sharps: '4 ♭', flat: true }, 'Eb': { sub: 'Ab', subMin: 'Fm', dom: 'Bb', domMin: 'Gm', min: 'Cm', sharps: '3 ♭', flat: true }, 'Bb': { sub: 'Eb', subMin: 'Cm', dom: 'F', domMin: 'Dm', min: 'Gm', sharps: '2 ♭', flat: true }, 'F':  { sub: 'Bb', subMin: 'Gm', dom: 'C', domMin: 'Am', min: 'Dm', sharps: '1 ♭', flat: true } };
                 return details[root] || details['C'];
             };
-
             const current = getKeyDetails(selectedKey);
             const currentItem = WHEEL_ITEMS.find(item => item.label === selectedKey);
             const rotation = -30 * (currentItem ? currentItem.idx : (selectedKey === 'F#' ? 6 : 0));
@@ -1078,95 +884,275 @@
                 <div className="animate-fade-in flex flex-col items-center">
                     <div className="relative w-80 h-80 mb-8 mt-4">
                         <div className="w-full h-full rounded-full relative wheel-transition" style={{ transform: `rotate(${rotation}deg)` }}>
-                            {WHEEL_ITEMS.map((k, i) => {
-                                const angle = 30 * i;
-                                const isSelected = k.label === selectedKey || (k.label === 'Gb' && selectedKey === 'F#');
-                                // Obtener la relativa menor para mostrar debajo
-                                const minKey = getKeyDetails(k.label).min;
-                                
-                                return (
-                                    <div key={i} className="absolute w-full h-full left-0 top-0 pointer-events-none" style={{ transform: `rotate(${angle}deg)` }}>
-                                        <div 
-                                            onClick={(e) => { e.stopPropagation(); setSelectedKey(k.label); }}
-                                            className={`pointer-events-auto cursor-pointer absolute left-1/2 -ml-[40px] top-0 w-[80px] h-[160px] flex flex-col items-center pt-2 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-60 hover:opacity-80'}`}
-                                        >
-                                            <span className={`text-lg font-bold ${isSelected ? 'text-brand-600 scale-125' : 'text-slate-800 dark:text-slate-200'} transition-transform bg-white/80 dark:bg-slate-900/80 px-2 rounded-lg`}>
-                                                {k.label === 'Gb' ? 'Gb/F#' : k.label}
-                                            </span>
-                                            {/* RESTAURADO: Visualización de la nota relativa menor */}
-                                            <span className="text-xs font-medium text-slate-500 mt-1 bg-white/80 dark:bg-slate-900/80 px-1 rounded">
-                                                {k.label === 'Gb' ? 'Ebm/D#m' : minKey}
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {WHEEL_ITEMS.map((k, i) => { const angle = 30 * i; const isSelected = k.label === selectedKey || (k.label === 'Gb' && selectedKey === 'F#'); const minKey = getKeyDetails(k.label).min; return (<div key={i} className="absolute w-full h-full left-0 top-0 pointer-events-none" style={{ transform: `rotate(${angle}deg)` }}><div onClick={(e) => { e.stopPropagation(); setSelectedKey(k.label); }} className={`pointer-events-auto cursor-pointer absolute left-1/2 -ml-[40px] top-0 w-[80px] h-[160px] flex flex-col items-center pt-2 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-60 hover:opacity-80'}`}><span className={`text-lg font-bold ${isSelected ? 'text-brand-600 scale-125' : 'text-slate-800 dark:text-slate-200'} transition-transform bg-white/80 dark:bg-slate-900/80 px-2 rounded-lg`}>{k.label === 'Gb' ? 'Gb/F#' : k.label}</span><span className="text-xs font-medium text-slate-500 mt-1 bg-white/80 dark:bg-slate-900/80 px-1 rounded">{k.label === 'Gb' ? 'Ebm/D#m' : minKey}</span></div></div>); })}
                             <div className="absolute inset-0 m-auto w-40 h-40 rounded-full border-4 border-slate-200 dark:border-slate-700 pointer-events-none"></div>
                         </div>
-                        <div className="absolute top-[-10px] left-1/2 -ml-3 w-6 h-6 text-brand-500 z-10">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21l-12-18h24z"/></svg>
-                        </div>
+                        <div className="absolute top-[-10px] left-1/2 -ml-3 w-6 h-6 text-brand-500 z-10"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21l-12-18h24z"/></svg></div>
                     </div>
-
                     <div className="w-full max-w-lg grid grid-cols-3 gap-3 text-center">
-                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase">Subdominante (IV)</div>
-                            <div className="text-xl font-bold text-slate-700 dark:text-slate-200">{current.sub}</div>
-                            <div className="text-xs text-slate-400">{current.subMin}</div>
-                        </div>
-                        
-                        <div className="bg-brand-50 dark:bg-brand-900/20 p-3 rounded-xl shadow-md border border-brand-200 dark:border-brand-800 scale-110 z-10 relative group">
-                            <div className="text-[10px] font-bold text-brand-500 uppercase">Tónica (I)</div>
-                            <div className="text-3xl font-black text-brand-600 dark:text-white">{selectedKey}</div>
-                            {/* CORREGIDO: "Relativa:" completo */}
-                            <div className="text-sm font-bold text-slate-500 dark:text-slate-300">Relativa: {current.min}</div>
-                            <div className="mt-1 text-xs bg-white dark:bg-slate-800 inline-block px-2 py-0.5 rounded-full text-slate-500">
-                                {current.sharps}
-                            </div>
-                            {(selectedKey === 'Gb' || selectedKey === 'F#') && (<div className="absolute -bottom-8 left-0 right-0 text-center"><button onClick={(e) => {e.stopPropagation(); setSelectedKey(prev => prev === 'Gb' ? 'F#' : 'Gb');}} className="text-[10px] text-brand-500 underline bg-white/50 dark:bg-slate-900/50 px-2 py-1 rounded">Ver como {selectedKey === 'Gb' ? 'F#' : 'Gb'}</button></div>)}
-                        </div>
-
-                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase">Dominante (V)</div>
-                            <div className="text-xl font-bold text-slate-700 dark:text-slate-200">{current.dom}</div>
-                            <div className="text-xs text-slate-400">{current.domMin}</div>
-                        </div>
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"><div className="text-[10px] font-bold text-slate-400 uppercase">Subdominante (IV)</div><div className="text-xl font-bold text-slate-700 dark:text-slate-200">{current.sub}</div><div className="text-xs text-slate-400">{current.subMin}</div></div>
+                        <div className="bg-brand-50 dark:bg-brand-900/20 p-3 rounded-xl shadow-md border border-brand-200 dark:border-brand-800 scale-110 z-10 relative group"><div className="text-[10px] font-bold text-brand-500 uppercase">Tónica (I)</div><div className="text-3xl font-black text-brand-600 dark:text-white">{selectedKey}</div><div className="text-sm font-bold text-slate-500 dark:text-slate-300">Relativa: {current.min}</div><div className="mt-1 text-xs bg-white dark:bg-slate-800 inline-block px-2 py-0.5 rounded-full text-slate-500">{current.sharps}</div>{(selectedKey === 'Gb' || selectedKey === 'F#') && (<div className="absolute -bottom-8 left-0 right-0 text-center"><button onClick={(e) => {e.stopPropagation(); setSelectedKey(prev => prev === 'Gb' ? 'F#' : 'Gb');}} className="text-[10px] text-brand-500 underline bg-white/50 dark:bg-slate-900/50 px-2 py-1 rounded">Ver como {selectedKey === 'Gb' ? 'F#' : 'Gb'}</button></div>)}</div>
+                        <div className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"><div className="text-[10px] font-bold text-slate-400 uppercase">Dominante (V)</div><div className="text-xl font-bold text-slate-700 dark:text-slate-200">{current.dom}</div><div className="text-xs text-slate-400">{current.domMin}</div></div>
                     </div>
-                    
-                    <p className="mt-8 text-slate-400 text-xs text-center max-w-xs">
-                        Usa el Círculo de Quintas para componer progresiones, modular a otras tonalidades o encontrar las notas alteradas de una escala.
-                    </p>
+                    <p className="mt-8 text-slate-400 text-center text-xs max-w-xs">Usa el Círculo de Quintas para componer progresiones, modular a otras tonalidades o encontrar las notas alteradas de una escala.</p>
                 </div>
             );
         };
 
-        // --- COMPONENTE: THEORY HUB (Nuevo Wrapper) ---
         const TheoryHub = () => {
-            const [activeTool, setActiveTool] = useState('circle'); // circle | analyzer
-
+            const [activeTool, setActiveTool] = useState('circle'); 
             return (
                 <div className="max-w-3xl mx-auto">
                     <div className="flex justify-center mb-8 bg-slate-200 dark:bg-slate-800 p-1 rounded-2xl w-fit mx-auto">
-                        <button 
-                            onClick={() => setActiveTool('circle')}
-                            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTool === 'circle' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                        >
-                            Círculo de Quintas
-                        </button>
-                        <button 
-                            onClick={() => setActiveTool('analyzer')}
-                            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                        >
-                            Analizador
-                        </button>
+                        <button onClick={() => setActiveTool('circle')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTool === 'circle' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo de Quintas</button>
+                        <button onClick={() => setActiveTool('analyzer')} className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Analizador</button>
                     </div>
-
                     {activeTool === 'analyzer' ? <ChordAnalyzer /> : <CircleOfFifths />}
                 </div>
             );
         };
 
-        // --- COMPONENTS: METRONOME (CLEANUP: NO DRUMS) ---
+        const Tuner = () => {
+            const { resume, getContext } = useAudioContext();
+            const [isActive, setIsActive] = useState(false); const [note, setNote] = useState('--'); const [cents, setCents] = useState(0); const [errorMsg, setErrorMsg] = useState(null); const analyserRef = useRef(null); const rafRef = useRef(null); const streamRef = useRef(null);
+            const autoCorrelate = (buf, sampleRate) => { let size = buf.length, rms = 0; for (let i = 0; i < size; i++) rms += buf[i] * buf[i]; if (Math.sqrt(rms / size) < 0.015) return -1; let r1 = 0, r2 = size - 1, thres = 0.2; for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; } for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; } const buf2 = buf.slice(r1, r2); size = buf2.length; const c = new Float32Array(size); for (let i = 0; i < size; i++) for (let j = 0; j < size - i; j++) c[i] = c[i] + buf2[j] * buf2[j + i]; let d = 0; while (c[d] > c[d + 1]) d++; let maxval = -1, maxpos = -1; for (let i = d; i < size; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; } let T0 = maxpos; const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]; const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2; if (a) T0 = T0 - b / (2 * a); return sampleRate / T0; };
+            const updatePitch = () => { const ctx = getContext(); if (!analyserRef.current || !ctx) return; const buf = new Float32Array(2048); analyserRef.current.getFloatTimeDomainData(buf); const ac = autoCorrelate(buf, ctx.sampleRate); if (ac !== -1) { const noteNum = 12 * (Math.log(ac / 440) / Math.log(2)); const noteRaw = Math.round(noteNum) + 69; setNote(NOTES[noteRaw % 12]); setCents(Math.floor(1200 * Math.log2(ac / (440 * Math.pow(2, (noteRaw - 69) / 12))))); } rafRef.current = requestAnimationFrame(updatePitch); };
+            const toggleTuner = async () => { if (isActive) { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); setIsActive(false); setNote('--'); setCents(0); } else { setErrorMsg(null); await resume(); const ctx = getContext(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); streamRef.current = stream; const source = ctx.createMediaStreamSource(stream); const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); analyserRef.current = analyser; setIsActive(true); updatePitch(); } catch (err) { setErrorMsg("Error: Permiso de micrófono denegado."); } } };
+            useEffect(() => () => { if(isActive) toggleTuner(); }, []);
+            const isInTune = isActive && note !== '--' && Math.abs(cents) < 5; const colorClass = !isActive ? 'text-slate-300' : isInTune ? 'text-emerald-500' : 'text-amber-500';
+            return (<div className="flex flex-col items-center p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm mx-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Afinador</h2>{errorMsg && <div className="mb-4 p-2 bg-red-100 text-red-600 text-xs rounded">{errorMsg}</div>}<div className="relative w-64 h-64 mb-8"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className="absolute inset-0 flex flex-col items-center justify-center"><span className={`text-8xl font-black ${colorClass} transition-colors`}>{note}</span><span className="text-slate-400 font-mono mt-2">{isActive ? (note !== '--' ? `${cents > 0 ? '+' : ''}${cents}` : 'Escuchando...') : 'OFF'}</span></div>{isActive && note !== '--' && (<div className={`absolute top-0 left-1/2 w-2 h-8 -ml-1 rounded-full origin-bottom transition-all duration-100 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ top: '-10px', height: '30px', transformOrigin: '50% 138px', transform: `rotate(${cents * 1.5}deg)` }} />)}</div><div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden relative"><div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10"></div>{isActive && note !== '--' && <div className={`h-full transition-all duration-75 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '10%', position: 'absolute', left: `calc(50% + ${cents}%)`, transform: 'translateX(-50%)', borderRadius: '99px' }}></div>}</div><button onClick={toggleTuner} className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-white transition-all w-full justify-center shadow-lg ${isActive ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isActive ? "micOff" : "mic"} /> {isActive ? "Detener" : "Activar Micrófono"}</button></div>);
+        };
+
+        const IdeaRecorder = () => {
+            const [isRecording, setIsRecording] = useState(false);
+            const [recordings, setRecordings] = useState([]);
+            const [recordingTime, setRecordingTime] = useState(0);
+            const mediaRecorderRef = useRef(null);
+            const chunksRef = useRef([]);
+            const timerRef = useRef(null);
+            const dialog = useDialog();
+
+            useEffect(() => {
+                loadRecordings();
+                return () => { recordings.forEach(rec => { if (rec.url) URL.revokeObjectURL(rec.url); }); };
+            }, []);
+
+            const loadRecordings = async () => {
+                try {
+                    const loaded = await getRecordingsFromDB();
+                    const withUrls = loaded.map(rec => ({ ...rec, url: URL.createObjectURL(rec.blob) })).sort((a, b) => new Date(b.date) - new Date(a.date));
+                    setRecordings(withUrls);
+                } catch (e) { console.error("Error loading recordings", e); }
+            };
+
+            const startRecording = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const recorder = new MediaRecorder(stream);
+                    mediaRecorderRef.current = recorder;
+                    chunksRef.current = [];
+                    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+                    recorder.onstop = async () => {
+                        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                        const id = Date.now().toString();
+                        const newRecording = { id, blob, date: new Date().toISOString() };
+                        await saveRecordingToDB(newRecording);
+                        stream.getTracks().forEach(track => track.stop());
+                        loadRecordings();
+                    };
+                    recorder.start();
+                    setIsRecording(true);
+                    setRecordingTime(0);
+                    timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
+                } catch (err) { dialog.alert({ title: "Error", message: "No se pudo acceder al micrófono. Verifica los permisos." }); }
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && isRecording) {
+                    mediaRecorderRef.current.stop();
+                    setIsRecording(false);
+                    clearInterval(timerRef.current);
+                }
+            };
+
+            const handleDelete = (id) => { dialog.confirm({ title: "¿Eliminar grabación?", message: "Esta acción no se puede deshacer.", onConfirm: async () => { await deleteRecordingFromDB(id); loadRecordings(); } }); };
+            const formatTime = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s < 10 ? '0' : ''}${s}`; };
+            const formatDate = (isoString) => { const d = new Date(isoString); return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}); };
+
+            return (
+                <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center relative overflow-hidden"><div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-xs font-mono text-slate-500">{formatTime(recordingTime)}</div><h2 className="text-2xl font-bold mb-8 dark:text-white">Grabadora de Ideas</h2><div className="flex justify-center mb-8"><button onClick={isRecording ? stopRecording : startRecording} className={`w-32 h-32 rounded-full flex items-center justify-center relative transition-all duration-300 shadow-2xl ${isRecording ? 'bg-white text-red-500 scale-105' : 'bg-gradient-to-br from-rose-500 to-red-600 text-white hover:scale-105'}`}>{isRecording && <div className="absolute inset-0 rounded-full animate-pulse-ring-red"></div>}<Icon name={isRecording ? "stop" : "mic"} size={48} fill={isRecording ? "currentColor" : "none"} /></button></div><p className={`text-sm font-bold tracking-widest uppercase transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>{isRecording ? 'Grabando...' : 'Toque para Grabar'}</p></div>
+                    <div className="space-y-4"><h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-2">Mis Ideas ({recordings.length})</h3>{recordings.length === 0 ? (<div className="text-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 text-sm">No tienes grabaciones guardadas aún.</div>) : (<div className="space-y-3">{recordings.map(rec => (<div key={rec.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-4 group"><div className="p-3 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full"><Icon name="mic" size={20} /></div><div className="flex-1 text-center sm:text-left w-full"><div className="text-xs text-slate-400 font-mono mb-1">{formatDate(rec.date)}</div><audio controls src={rec.url} className="w-full h-8" /></div><div className="flex gap-2"><a href={rec.url} download={`Idea-${new Date(rec.date).toISOString().slice(0,10)}.webm`} className="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Descargar"><Icon name="download" size={18} /></a><button onClick={() => handleDelete(rec.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Eliminar"><Icon name="trash" size={18} /></button></div></div>))}</div>)}</div>
+                </div>
+            );
+        };
+
+        const JamLooper = () => {
+            const { getContext, resume } = useAudioContext();
+            const [status, setStatus] = useState('idle'); 
+            const [loopBuffer, setLoopBuffer] = useState(null);
+            const recorderNodeRef = useRef(null);
+            const sourceNodeRef = useRef(null);
+            const recordedChunksRef = useRef([]);
+            const startTimeRef = useRef(0);
+            const playbackProgressRef = useRef(0);
+            const animationFrameRef = useRef(null);
+            const dialog = useDialog();
+
+            useEffect(() => { return () => { stopAll(); }; }, []);
+            const stopAll = () => { if (sourceNodeRef.current) { try { sourceNodeRef.current.stop(); } catch(e){} sourceNodeRef.current = null; } if (recorderNodeRef.current) { recorderNodeRef.current.disconnect(); recorderNodeRef.current = null; } if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current); };
+            const startRecording = async () => { try { await resume(); const ctx = getContext(); const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false, latency: 0 } }); const source = ctx.createMediaStreamSource(stream); const processor = ctx.createScriptProcessor(4096, 1, 1); recordedChunksRef.current = []; processor.onaudioprocess = (e) => { const input = e.inputBuffer.getChannelData(0); recordedChunksRef.current.push(new Float32Array(input)); }; source.connect(processor); processor.connect(ctx.destination); recorderNodeRef.current = processor; setStatus('recording'); startTimeRef.current = Date.now(); } catch (err) { dialog.alert({ title: "Error", message: "No se pudo acceder al micrófono." }); } };
+            const stopRecordingAndLoop = () => { if (recorderNodeRef.current) { recorderNodeRef.current.disconnect(); recorderNodeRef.current = null; } const ctx = getContext(); if (!ctx || recordedChunksRef.current.length === 0) { setStatus('idle'); return; } const totalLen = recordedChunksRef.current.reduce((acc, c) => acc + c.length, 0); const bufferData = new Float32Array(totalLen); let offset = 0; for (const chunk of recordedChunksRef.current) { bufferData.set(chunk, offset); offset += chunk.length; } const audioBuffer = ctx.createBuffer(1, totalLen, ctx.sampleRate); audioBuffer.copyToChannel(bufferData, 0); setLoopBuffer(audioBuffer); playLoop(audioBuffer); };
+            const playLoop = (buffer) => { const ctx = getContext(); stopAll(); const source = ctx.createBufferSource(); source.buffer = buffer; source.loop = true; source.connect(ctx.destination); source.start(0); sourceNodeRef.current = source; setStatus('playing'); animateProgress(buffer.duration); };
+            const animateProgress = (duration) => { const start = performance.now(); const loop = () => { const elapsed = (performance.now() - start) / 1000; playbackProgressRef.current = (elapsed % duration) / duration; const indicator = document.getElementById('loop-indicator'); if (indicator) { indicator.style.background = `conic-gradient(#0d9488 ${playbackProgressRef.current * 360}deg, transparent 0deg)`; } if (status === 'idle') return; animationFrameRef.current = requestAnimationFrame(loop); }; loop(); };
+            const clearLoop = () => { stopAll(); setLoopBuffer(null); setStatus('idle'); };
+
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
+                    <div className="p-4 bg-teal-100 dark:bg-teal-900/30 rounded-full mb-4 text-teal-600 inline-block"><Icon name="repeat" size={48} /></div><h2 className="text-2xl font-bold mb-2 dark:text-white">Jam Looper</h2><p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">Cero latencia. Graba y toca encima al instante.</p>
+                    <div className="flex flex-col items-center gap-6">{status === 'idle' && (<button onClick={startRecording} className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl bg-slate-800 dark:bg-white text-white dark:text-slate-900 hover:scale-105 transition-transform"><div className="flex flex-col items-center"><Icon name="mic" size={40} /><span className="text-xs font-bold mt-2 uppercase">Grabar</span></div></button>)}{status === 'recording' && (<button onClick={stopRecordingAndLoop} className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl bg-red-500 text-white animate-pulse ring-4 ring-red-200 transition-all scale-110"><div className="flex flex-col items-center"><Icon name="stop" size={40} fill="currentColor" /><span className="text-xs font-bold mt-2 uppercase">Loop!</span></div></button>)}{status === 'playing' && (<div className="flex flex-col items-center gap-6 w-full animate-fade-in"><div className="relative w-32 h-32 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden"><div id="loop-indicator" className="absolute inset-0 opacity-30"></div><div className="absolute inset-2 bg-white dark:bg-slate-800 rounded-full flex flex-col items-center justify-center z-10"><span className="text-2xl font-black text-teal-600">ON</span><span className="text-[10px] text-slate-400 uppercase">Looping</span></div></div><div className="flex gap-4 w-full"><button onClick={() => playLoop(loopBuffer)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-teal-700 flex items-center justify-center gap-2"><Icon name="repeat" size={18} /> Re-Sync</button><button onClick={clearLoop} className="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 flex items-center justify-center gap-2"><Icon name="trash" size={18} /> Borrar</button></div></div>)}<p className="text-xs text-slate-400 mt-2">{status === 'recording' ? 'Grabando... Pulsa para crear el bucle.' : status === 'playing' ? 'El loop está en memoria (sin latencia).' : 'Pulsa para grabar tu base rítmica.'}</p></div>
+                </div>
+            );
+        };
+
+        const PadPlayer = ({ activeKey, setActiveKey, isPlaying, setIsPlaying }) => {
+            const [volume, setVolume] = useState(0.3);
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-3 mb-6"><div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full"><Icon name="layers" size={24} /></div><div><h2 className="text-xl font-bold dark:text-white">Worship Pads</h2><p className="text-xs text-slate-500">Sonido ambiental continuo</p></div></div>
+                    <div className="grid grid-cols-4 gap-2 mb-6">{NOTES.map((note) => (<button key={note} onClick={() => { setActiveKey(note); if(!isPlaying) setIsPlaying(true); }} className={`p-3 rounded-xl font-bold text-sm transition-all ${activeKey === note && isPlaying ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}>{note}</button>))}</div>
+                    <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl"><button onClick={() => setIsPlaying(!isPlaying)} className={`p-4 rounded-full text-white shadow-md transition-transform active:scale-95 ${isPlaying ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-400 hover:bg-slate-500'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /></button><div className="flex-1"><label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Volumen Master</label><input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { const val = Number(e.target.value); setVolume(val); window.dispatchEvent(new CustomEvent('gwt-pad-volume', { detail: val })); }} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600" /></div></div>
+                </div>
+            );
+        };
+
+        const TrackTrainer = () => {
+            const [file, setFile] = useState(null);
+            const [audioUrl, setAudioUrl] = useState(null);
+            const [speed, setSpeed] = useState(1.0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [loopStart, setLoopStart] = useState(null);
+            const [loopEnd, setLoopEnd] = useState(null);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const audioRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            const handleFileChange = (e) => {
+                const selected = e.target.files[0];
+                if (selected) {
+                    const url = URL.createObjectURL(selected);
+                    setFile(selected);
+                    setAudioUrl(url);
+                    setSpeed(1.0);
+                    setLoopStart(null);
+                    setLoopEnd(null);
+                    setIsPlaying(false);
+                }
+            };
+
+            useEffect(() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+
+                audio.playbackRate = speed;
+                if (audio.preservesPitch !== undefined) { audio.preservesPitch = true; } 
+                else if (audio.mozPreservesPitch !== undefined) { audio.mozPreservesPitch = true; } 
+                else if (audio.webkitPreservesPitch !== undefined) { audio.webkitPreservesPitch = true; }
+
+                const handleTimeUpdate = () => {
+                    setCurrentTime(audio.currentTime);
+                    if (loopEnd !== null && loopStart !== null && audio.currentTime >= loopEnd) {
+                        audio.currentTime = loopStart;
+                        if(isPlaying) audio.play();
+                    }
+                };
+
+                const handleLoadedMetadata = () => setDuration(audio.duration);
+                const handleEnded = () => setIsPlaying(false);
+
+                audio.addEventListener('timeupdate', handleTimeUpdate);
+                audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+                audio.addEventListener('ended', handleEnded);
+
+                return () => {
+                    audio.removeEventListener('timeupdate', handleTimeUpdate);
+                    audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    audio.removeEventListener('ended', handleEnded);
+                };
+            }, [speed, loopStart, loopEnd, isPlaying]);
+
+            const togglePlay = () => {
+                const audio = audioRef.current;
+                if (isPlaying) { audio.pause(); } else { audio.play().catch(e => console.error(e)); }
+                setIsPlaying(!isPlaying);
+            };
+
+            const stop = () => {
+                const audio = audioRef.current;
+                audio.pause();
+                audio.currentTime = loopStart !== null ? loopStart : 0;
+                setIsPlaying(false);
+            };
+
+            const handleSeek = (e) => {
+                const time = parseFloat(e.target.value);
+                audioRef.current.currentTime = time;
+                setCurrentTime(time);
+            };
+
+            const setPointA = () => setLoopStart(currentTime);
+            const setPointB = () => {
+                if (loopStart !== null && currentTime > loopStart) {
+                    setLoopEnd(currentTime);
+                    audioRef.current.currentTime = loopStart;
+                    if(!isPlaying) togglePlay();
+                }
+            };
+            const clearLoop = () => { setLoopStart(null); setLoopEnd(null); };
+
+            const formatTime = (t) => {
+                if (!t && t !== 0) return "0:00";
+                const m = Math.floor(t / 60);
+                const s = Math.floor(t % 60);
+                return `${m}:${s < 10 ? '0' : ''}${s}`;
+            };
+
+            return (
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-2xl mx-auto">
+                    <div className="flex items-center gap-3 mb-6"><div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full"><Icon name="music" size={24} /></div><div><h2 className="text-xl font-bold dark:text-white">Entrenador de Pistas</h2><p className="text-xs text-slate-500">Carga MP3, baja velocidad y crea loops.</p></div></div>
+                    {!audioUrl ? (
+                        <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-12 text-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors group">
+                            <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileChange} />
+                            <div className="text-slate-400 group-hover:text-brand-500 mb-4 mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 transition-colors"><Icon name="file" size={32} /></div>
+                            <p className="text-slate-600 dark:text-slate-300 font-bold">Toca para cargar MP3/WAV</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="bg-slate-100 dark:bg-slate-900 px-4 py-3 rounded-xl flex justify-between items-center"><span className="text-sm font-bold truncate max-w-[200px] dark:text-white">{file?.name}</span><button onClick={() => { setAudioUrl(null); setFile(null); }} className="text-xs text-red-500 hover:text-red-600 font-bold">Cambiar</button></div>
+                            <audio ref={audioRef} src={audioUrl} />
+                            <div className="flex justify-center gap-6 items-center">
+                                <button onClick={stop} className="p-4 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"><Icon name="stop" fill="currentColor" /></button>
+                                <button onClick={togglePlay} className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-xl transition-transform active:scale-95 ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} size={40} fill="currentColor" /></button>
+                            </div>
+                            <div className="space-y-1"><input type="range" min="0" max={duration || 100} value={currentTime} onChange={handleSeek} className="w-full h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600"/><div className="flex justify-between text-xs font-mono text-slate-500"><span>{formatTime(currentTime)}</span><span>{formatTime(duration)}</span></div></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                                    <label className="text-xs font-bold text-slate-500 uppercase flex justify-between mb-3"><span>Velocidad</span><span className="bg-brand-100 text-brand-700 px-2 rounded">{Math.round(speed * 100)}%</span></label>
+                                    <input type="range" min="0.5" max="1.2" step="0.05" value={speed} onChange={(e) => setSpeed(parseFloat(e.target.value))} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-600 accent-brand-600"/>
+                                    <div className="flex justify-between mt-2"><button onClick={() => setSpeed(0.5)} className="text-[10px] bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm">50%</button><button onClick={() => setSpeed(0.75)} className="text-[10px] bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm">75%</button><button onClick={() => setSpeed(1.0)} className="text-[10px] bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm font-bold text-brand-600">100%</button></div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 flex flex-col justify-between">
+                                    <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-500 uppercase">Loop A-B</span>{(loopStart !== null || loopEnd !== null) && <button onClick={clearLoop} className="text-xs text-red-500 font-bold">Borrar</button>}</div>
+                                    <div className="flex gap-2"><button onClick={setPointA} className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${loopStart !== null ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white dark:bg-slate-800 dark:text-white shadow-sm'}`}>{loopStart !== null ? 'A: ' + formatTime(loopStart) : 'Set A'}</button><button onClick={setPointB} disabled={loopStart === null} className={`flex-1 py-3 rounded-lg font-bold text-sm transition-colors ${loopEnd !== null ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white dark:bg-slate-800 dark:text-white shadow-sm disabled:opacity-50'}`}>{loopEnd !== null ? 'B: ' + formatTime(loopEnd) : 'Set B'}</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const Metronome = () => {
             const { resume, getContext } = useAudioContext();
             const [isPlaying, setIsPlaying] = useState(false);
@@ -1182,17 +1168,11 @@
             const nextNoteTimeRef = useRef(0); const timerIDRef = useRef(null); const currentNoteRef = useRef(0); const currentBarRef = useRef(0); const startTimeRef = useRef(0); const tapTimesRef = useRef([]);
             const bpmRef = useRef(bpm); const bpmIncRef = useRef(trainerBpmInc); const barsIncRef = useRef(trainerBars); const trainerEnabledRef = useRef(trainerEnabled);
             const dialog = useDialog();
-
-            // Referencias para la limpieza segura
             const isPlayingRef = useRef(isPlaying);
             useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
 
             useEffect(() => { bpmRef.current = bpm; }, [bpm]); useEffect(() => { bpmIncRef.current = trainerBpmInc; }, [trainerBpmInc]); useEffect(() => { barsIncRef.current = trainerBars; }, [trainerBars]); useEffect(() => { trainerEnabledRef.current = trainerEnabled; }, [trainerEnabled]);
-            
-            useEffect(() => {
-                const savedPresets = localStorage.getItem('gwt_metronome_presets');
-                if (savedPresets) setPresets(JSON.parse(savedPresets));
-            }, []);
+            useEffect(() => { const savedPresets = localStorage.getItem('gwt_metronome_presets'); if (savedPresets) setPresets(JSON.parse(savedPresets)); }, []);
 
             const playClick = (time, type) => { 
                 const ctx = getContext(); if (!ctx) return; 
@@ -1212,77 +1192,15 @@
             const togglePlay = () => { if (isPlaying) { setIsPlaying(false); clearTimeout(timerIDRef.current); if (startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); startTimeRef.current = 0; } } else { startTimeRef.current = Date.now(); resume().then((ctx) => { if(ctx) { currentNoteRef.current = 0; currentBarRef.current = 0; nextNoteTimeRef.current = ctx.currentTime + 0.05; setIsPlaying(true); scheduler(); }}); } };
             const handleTap = () => { const now = Date.now(); let times = tapTimesRef.current; if (times.length > 0 && now - times[times.length - 1] > 2000) times = []; times.push(now); if (times.length > 4) times.shift(); tapTimesRef.current = times; if (times.length > 1) { let intervals = []; for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]); const avg = intervals.reduce((a, b) => a + b) / intervals.length; const newBpm = Math.round(60000 / avg); if (newBpm >= 30 && newBpm <= 300) setBpm(newBpm); } };
             
-            useEffect(() => {
-                return () => {
-                    clearTimeout(timerIDRef.current);
-                    if (isPlayingRef.current && startTimeRef.current > 0) {
-                         const elapsed = (Date.now() - startTimeRef.current) / 60000;
-                         if (elapsed > 0.0) logPracticeTime(elapsed);
-                    }
-                };
-            }, []);
+            useEffect(() => { return () => { clearTimeout(timerIDRef.current); if (isPlayingRef.current && startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); } }; }, []);
 
-            const savePreset = () => {
-                dialog.prompt({
-                    title: "Guardar configuración",
-                    message: "Asigna un nombre a este preset:",
-                    onConfirm: (name) => {
-                        if(!name) return;
-                        const newPreset = { id: Date.now(), name, bpm, beatsPerMeasure, subdivision, trainerEnabled, trainerBars, trainerBpmInc };
-                        const updated = [...presets, newPreset];
-                        setPresets(updated);
-                        localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated));
-                    }
-                });
-            };
+            const savePreset = () => { dialog.prompt({ title: "Guardar configuración", message: "Asigna un nombre a este preset:", onConfirm: (name) => { if(!name) return; const newPreset = { id: Date.now(), name, bpm, beatsPerMeasure, subdivision, trainerEnabled, trainerBars, trainerBpmInc }; const updated = [...presets, newPreset]; setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); } }); };
+            const loadPreset = (p) => { setBpm(p.bpm); setBeatsPerMeasure(p.beatsPerMeasure); setSubdivision(p.subdivision); setTrainerEnabled(p.trainerEnabled); setTrainerBars(p.trainerBars); setTrainerBpmInc(p.trainerBpmInc); };
+            const deletePreset = (id, e) => { e.stopPropagation(); const updated = presets.filter(p => p.id !== id); setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); };
 
-            const loadPreset = (p) => {
-                setBpm(p.bpm);
-                setBeatsPerMeasure(p.beatsPerMeasure);
-                setSubdivision(p.subdivision);
-                setTrainerEnabled(p.trainerEnabled);
-                setTrainerBars(p.trainerBars);
-                setTrainerBpmInc(p.trainerBpmInc);
-            };
-
-            const deletePreset = (id, e) => {
-                e.stopPropagation();
-                const updated = presets.filter(p => p.id !== id);
-                setPresets(updated);
-                localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated));
-            };
-
-            return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden">
-                <div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative">
-                    <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div>
-                </div>
-                <div className="w-full p-6 space-y-6">
-                    <div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div>
-                    <div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div>
-                    <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div>
-                    <div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div>
-                    
-                    {/* PRESETS SECTION */}
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span>
-                            <button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button>
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                            {presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}
-                            {presets.map(p => (
-                                <div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative">
-                                    <span className="text-sm font-bold dark:text-white mr-4">{p.name}</span>
-                                    <span className="text-xs text-slate-500 block">{p.bpm} BPM</span>
-                                    <button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div></div>);
+            return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden"><div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
         };
 
-        // --- COMPONENTS: PRACTICE ROUTINE (Restaurado) ---
         const PracticeRoutine = () => {
             const [currentRoutine, setCurrentRoutine] = useState(null);
             const [activeExerciseIdx, setActiveExerciseIdx] = useState(null); 
@@ -1329,458 +1247,6 @@
             return ( <div className="max-w-2xl mx-auto space-y-6"> <div className="flex justify-between items-center"> <h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2> <button onClick={() => setCurrentRoutine(null)} className="text-sm text-slate-500 hover:text-brand-500">Salir</button> </div> <div className="space-y-4"> {currentRoutine.map((ex, idx) => ( <div key={idx} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-5 rounded-2xl hover:shadow-md transition-all flex justify-between items-center group"> <div> <span className="text-xs font-bold text-brand-500 uppercase tracking-wide">{ex.type}</span> <h3 className="text-lg font-bold dark:text-white">{ex.name}</h3> <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{ex.desc}</p> </div> <button onClick={() => startExercise(idx)} className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg font-bold hover:opacity-90 shadow-lg"> Practicar </button> </div> ))} </div> <p className="text-center text-xs text-slate-400 mt-8"> Tip: Puedes ajustar el tiempo de cada ejercicio individualmente al entrar. </p> </div> );
         };
 
-        // --- COMPONENTS: TUNER (Restaurado) ---
-        const Tuner = () => {
-            const { resume, getContext } = useAudioContext();
-            const [isActive, setIsActive] = useState(false); const [note, setNote] = useState('--'); const [cents, setCents] = useState(0); const [errorMsg, setErrorMsg] = useState(null); const analyserRef = useRef(null); const rafRef = useRef(null); const streamRef = useRef(null);
-            const autoCorrelate = (buf, sampleRate) => { let size = buf.length, rms = 0; for (let i = 0; i < size; i++) rms += buf[i] * buf[i]; if (Math.sqrt(rms / size) < 0.015) return -1; let r1 = 0, r2 = size - 1, thres = 0.2; for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; } for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; } const buf2 = buf.slice(r1, r2); size = buf2.length; const c = new Float32Array(size); for (let i = 0; i < size; i++) for (let j = 0; j < size - i; j++) c[i] = c[i] + buf2[j] * buf2[j + i]; let d = 0; while (c[d] > c[d + 1]) d++; let maxval = -1, maxpos = -1; for (let i = d; i < size; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; } let T0 = maxpos; const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]; const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2; if (a) T0 = T0 - b / (2 * a); return sampleRate / T0; };
-            const updatePitch = () => { const ctx = getContext(); if (!analyserRef.current || !ctx) return; const buf = new Float32Array(2048); analyserRef.current.getFloatTimeDomainData(buf); const ac = autoCorrelate(buf, ctx.sampleRate); if (ac !== -1) { const noteNum = 12 * (Math.log(ac / 440) / Math.log(2)); const noteRaw = Math.round(noteNum) + 69; setNote(NOTES[noteRaw % 12]); setCents(Math.floor(1200 * Math.log2(ac / (440 * Math.pow(2, (noteRaw - 69) / 12))))); } rafRef.current = requestAnimationFrame(updatePitch); };
-            const toggleTuner = async () => { if (isActive) { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); setIsActive(false); setNote('--'); setCents(0); } else { setErrorMsg(null); await resume(); const ctx = getContext(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); streamRef.current = stream; const source = ctx.createMediaStreamSource(stream); const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); analyserRef.current = analyser; setIsActive(true); updatePitch(); } catch (err) { setErrorMsg("Error: Permiso de micrófono denegado."); } } };
-            useEffect(() => () => { if(isActive) toggleTuner(); }, []);
-            const isInTune = isActive && note !== '--' && Math.abs(cents) < 5; const colorClass = !isActive ? 'text-slate-300' : isInTune ? 'text-emerald-500' : 'text-amber-500';
-            return (<div className="flex flex-col items-center p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm mx-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Afinador</h2>{errorMsg && <div className="mb-4 p-2 bg-red-100 text-red-600 text-xs rounded">{errorMsg}</div>}<div className="relative w-64 h-64 mb-8"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className="absolute inset-0 flex flex-col items-center justify-center"><span className={`text-8xl font-black ${colorClass} transition-colors`}>{note}</span><span className="text-slate-400 font-mono mt-2">{isActive ? (note !== '--' ? `${cents > 0 ? '+' : ''}${cents}` : 'Escuchando...') : 'OFF'}</span></div>{isActive && note !== '--' && (<div className={`absolute top-0 left-1/2 w-2 h-8 -ml-1 rounded-full origin-bottom transition-all duration-100 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ top: '-10px', height: '30px', transformOrigin: '50% 138px', transform: `rotate(${cents * 1.5}deg)` }} />)}</div><div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden relative"><div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10"></div>{isActive && note !== '--' && <div className={`h-full transition-all duration-75 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '10%', position: 'absolute', left: `calc(50% + ${cents}%)`, transform: 'translateX(-50%)', borderRadius: '99px' }}></div>}</div><button onClick={toggleTuner} className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-white transition-all w-full justify-center shadow-lg ${isActive ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isActive ? "micOff" : "mic"} /> {isActive ? "Detener" : "Activar Micrófono"}</button></div>);
-        };
-        
-        // --- COMPONENTE: GRABADORA DE IDEAS (IdeaRecorder) ---
-        const IdeaRecorder = () => {
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordings, setRecordings] = useState([]);
-            const [recordingTime, setRecordingTime] = useState(0);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
-            const timerRef = useRef(null);
-            const dialog = useDialog();
-
-            useEffect(() => {
-                loadRecordings();
-                // Limpieza de URLs al desmontar
-                return () => {
-                    recordings.forEach(rec => {
-                        if (rec.url) URL.revokeObjectURL(rec.url);
-                    });
-                };
-            }, []);
-
-            const loadRecordings = async () => {
-                try {
-                    const loaded = await getRecordingsFromDB();
-                    // Crear URLs para reproducir los blobs
-                    const withUrls = loaded.map(rec => ({
-                        ...rec,
-                        url: URL.createObjectURL(rec.blob)
-                    })).sort((a, b) => new Date(b.date) - new Date(a.date));
-                    setRecordings(withUrls);
-                } catch (e) {
-                    console.error("Error loading recordings", e);
-                }
-            };
-
-            const startRecording = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    const recorder = new MediaRecorder(stream);
-                    mediaRecorderRef.current = recorder;
-                    chunksRef.current = [];
-
-                    recorder.ondataavailable = (e) => {
-                        if (e.data.size > 0) chunksRef.current.push(e.data);
-                    };
-
-                    recorder.onstop = async () => {
-                        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                        const id = Date.now().toString();
-                        const newRecording = {
-                            id,
-                            blob,
-                            date: new Date().toISOString()
-                        };
-                        
-                        await saveRecordingToDB(newRecording);
-                        
-                        // Detener tracks del stream
-                        stream.getTracks().forEach(track => track.stop());
-                        
-                        // Recargar lista
-                        loadRecordings();
-                    };
-
-                    recorder.start();
-                    setIsRecording(true);
-                    setRecordingTime(0);
-                    timerRef.current = setInterval(() => setRecordingTime(p => p + 1), 1000);
-
-                } catch (err) {
-                    dialog.alert({ title: "Error", message: "No se pudo acceder al micrófono. Verifica los permisos." });
-                }
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && isRecording) {
-                    mediaRecorderRef.current.stop();
-                    setIsRecording(false);
-                    clearInterval(timerRef.current);
-                }
-            };
-
-            const handleDelete = (id) => {
-                dialog.confirm({
-                    title: "¿Eliminar grabación?",
-                    message: "Esta acción no se puede deshacer.",
-                    onConfirm: async () => {
-                        await deleteRecordingFromDB(id);
-                        loadRecordings();
-                    }
-                });
-            };
-
-            const formatTime = (sec) => {
-                const m = Math.floor(sec / 60);
-                const s = sec % 60;
-                return `${m}:${s < 10 ? '0' : ''}${s}`;
-            };
-            
-            const formatDate = (isoString) => {
-                const d = new Date(isoString);
-                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            };
-
-            return (
-                <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
-                    {/* Tarjeta Principal de Grabación */}
-                    <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center relative overflow-hidden">
-                        <div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-xs font-mono text-slate-500">
-                            {formatTime(recordingTime)}
-                        </div>
-                        
-                        <h2 className="text-2xl font-bold mb-8 dark:text-white">Grabadora de Ideas</h2>
-                        
-                        <div className="flex justify-center mb-8">
-                            <button 
-                                onClick={isRecording ? stopRecording : startRecording}
-                                className={`w-32 h-32 rounded-full flex items-center justify-center relative transition-all duration-300 shadow-2xl ${isRecording ? 'bg-white text-red-500 scale-105' : 'bg-gradient-to-br from-rose-500 to-red-600 text-white hover:scale-105'}`}
-                            >
-                                {isRecording && <div className="absolute inset-0 rounded-full animate-pulse-ring-red"></div>}
-                                <Icon name={isRecording ? "stop" : "mic"} size={48} fill={isRecording ? "currentColor" : "none"} />
-                            </button>
-                        </div>
-                        
-                        <p className={`text-sm font-bold tracking-widest uppercase transition-colors ${isRecording ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
-                            {isRecording ? 'Grabando...' : 'Toque para Grabar'}
-                        </p>
-                    </div>
-
-                    {/* Lista de Grabaciones */}
-                    <div className="space-y-4">
-                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest pl-2">Mis Ideas ({recordings.length})</h3>
-                        
-                        {recordings.length === 0 ? (
-                            <div className="text-center p-8 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 text-sm">
-                                No tienes grabaciones guardadas aún.
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {recordings.map(rec => (
-                                    <div key={rec.id} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row items-center gap-4 group">
-                                        <div className="p-3 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full">
-                                            <Icon name="mic" size={20} />
-                                        </div>
-                                        
-                                        <div className="flex-1 text-center sm:text-left w-full">
-                                            <div className="text-xs text-slate-400 font-mono mb-1">{formatDate(rec.date)}</div>
-                                            <audio controls src={rec.url} className="w-full h-8" />
-                                        </div>
-                                        
-                                        <div className="flex gap-2">
-                                            <a 
-                                                href={rec.url} 
-                                                download={`Idea-${new Date(rec.date).toISOString().slice(0,10)}.webm`}
-                                                className="p-2 text-slate-400 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                                                title="Descargar"
-                                            >
-                                                <Icon name="download" size={18} />
-                                            </a>
-                                            <button 
-                                                onClick={() => handleDelete(rec.id)}
-                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                                title="Eliminar"
-                                            >
-                                                <Icon name="trash" size={18} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-        // --- COMPONENTE: JAM LOOPER (RE-INGENIERÍA PARA CERO LATENCIA) ---
-        const JamLooper = () => {
-            const { getContext, resume } = useAudioContext();
-            const [status, setStatus] = useState('idle'); // idle, recording, playing
-            const [loopBuffer, setLoopBuffer] = useState(null);
-            
-            const recorderNodeRef = useRef(null);
-            const sourceNodeRef = useRef(null);
-            const recordedChunksRef = useRef([]);
-            const startTimeRef = useRef(0);
-            const playbackProgressRef = useRef(0); // 0 to 1
-            const animationFrameRef = useRef(null);
-            
-            const dialog = useDialog();
-
-            // Limpieza al desmontar
-            useEffect(() => {
-                return () => {
-                    stopAll();
-                };
-            }, []);
-
-            const stopAll = () => {
-                if (sourceNodeRef.current) {
-                    try { sourceNodeRef.current.stop(); } catch(e){}
-                    sourceNodeRef.current = null;
-                }
-                if (recorderNodeRef.current) {
-                    recorderNodeRef.current.disconnect();
-                    recorderNodeRef.current = null;
-                }
-                if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-            };
-
-            const startRecording = async () => {
-                try {
-                    await resume();
-                    const ctx = getContext();
-                    const stream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { 
-                            echoCancellation: false, 
-                            autoGainControl: false, 
-                            noiseSuppression: false,
-                            latency: 0
-                        } 
-                    });
-                    
-                    const source = ctx.createMediaStreamSource(stream);
-                    // Usamos ScriptProcessor para acceso raw al buffer (deprecated pero estable para este uso simple)
-                    // Buffer size 4096 ofrece buen balance performance/latencia para grabación
-                    const processor = ctx.createScriptProcessor(4096, 1, 1);
-                    
-                    recordedChunksRef.current = [];
-                    
-                    processor.onaudioprocess = (e) => {
-                        const input = e.inputBuffer.getChannelData(0);
-                        // Copia profunda de los datos
-                        recordedChunksRef.current.push(new Float32Array(input));
-                    };
-                    
-                    source.connect(processor);
-                    processor.connect(ctx.destination); // Necesario para que onaudioprocess dispare en algunos navegadores
-                    
-                    recorderNodeRef.current = processor;
-                    // Guardamos referencia al stream para pararlo luego si se quiere
-                    
-                    setStatus('recording');
-                    startTimeRef.current = Date.now();
-
-                } catch (err) {
-                    dialog.alert({ title: "Error", message: "No se pudo acceder al micrófono." });
-                }
-            };
-
-            const stopRecordingAndLoop = () => {
-                if (recorderNodeRef.current) {
-                    recorderNodeRef.current.disconnect();
-                    recorderNodeRef.current = null;
-                }
-                
-                const ctx = getContext();
-                if (!ctx || recordedChunksRef.current.length === 0) {
-                    setStatus('idle');
-                    return;
-                }
-
-                // 1. Flatten Array de Chunks a un solo Float32Array
-                const totalLen = recordedChunksRef.current.reduce((acc, c) => acc + c.length, 0);
-                const bufferData = new Float32Array(totalLen);
-                let offset = 0;
-                for (const chunk of recordedChunksRef.current) {
-                    bufferData.set(chunk, offset);
-                    offset += chunk.length;
-                }
-
-                // 2. Crear AudioBuffer
-                const audioBuffer = ctx.createBuffer(1, totalLen, ctx.sampleRate);
-                audioBuffer.copyToChannel(bufferData, 0);
-                setLoopBuffer(audioBuffer);
-
-                // 3. Reproducir Inmediatamente
-                playLoop(audioBuffer);
-            };
-
-            const playLoop = (buffer) => {
-                const ctx = getContext();
-                stopAll(); // Parar anterior si existe
-
-                const source = ctx.createBufferSource();
-                source.buffer = buffer;
-                source.loop = true;
-                source.connect(ctx.destination);
-                source.start(0);
-                sourceNodeRef.current = source;
-                
-                setStatus('playing');
-                animateProgress(buffer.duration);
-            };
-
-            const animateProgress = (duration) => {
-                const start = performance.now();
-                const loop = () => {
-                    const elapsed = (performance.now() - start) / 1000;
-                    playbackProgressRef.current = (elapsed % duration) / duration;
-                    // Forzamos re-render visual solo si es necesario, o manipulamos DOM directo para performance
-                    // Aquí usaremos un re-render de React controlado o CSS var si fuera posible, 
-                    // para simpleza, actualizaremos un elemento visual vía ref si existiera, o state.
-                    // Para React state rápido:
-                    const indicator = document.getElementById('loop-indicator');
-                    if (indicator) {
-                        indicator.style.background = `conic-gradient(#0d9488 ${playbackProgressRef.current * 360}deg, transparent 0deg)`;
-                    }
-                    if (status === 'idle') return;
-                    animationFrameRef.current = requestAnimationFrame(loop);
-                };
-                loop();
-            };
-
-            const clearLoop = () => {
-                stopAll();
-                setLoopBuffer(null);
-                setStatus('idle');
-            };
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
-                    <div className="p-4 bg-teal-100 dark:bg-teal-900/30 rounded-full mb-4 text-teal-600 inline-block">
-                        <Icon name="repeat" size={48} />
-                    </div>
-                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Jam Looper</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8 text-sm">Cero latencia. Graba y toca encima al instante.</p>
-
-                    <div className="flex flex-col items-center gap-6">
-                        {status === 'idle' && (
-                            <button 
-                                onClick={startRecording}
-                                className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl bg-slate-800 dark:bg-white text-white dark:text-slate-900 hover:scale-105 transition-transform"
-                            >
-                                <div className="flex flex-col items-center">
-                                    <Icon name="mic" size={40} />
-                                    <span className="text-xs font-bold mt-2 uppercase">Grabar</span>
-                                </div>
-                            </button>
-                        )}
-
-                        {status === 'recording' && (
-                            <button 
-                                onClick={stopRecordingAndLoop}
-                                className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl bg-red-500 text-white animate-pulse ring-4 ring-red-200 transition-all scale-110"
-                            >
-                                <div className="flex flex-col items-center">
-                                    <Icon name="stop" size={40} fill="currentColor" />
-                                    <span className="text-xs font-bold mt-2 uppercase">Loop!</span>
-                                </div>
-                            </button>
-                        )}
-
-                        {status === 'playing' && (
-                            <div className="flex flex-col items-center gap-6 w-full animate-fade-in">
-                                {/* Visualizador Circular */}
-                                <div className="relative w-32 h-32 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center overflow-hidden">
-                                    <div id="loop-indicator" className="absolute inset-0 opacity-30"></div>
-                                    <div className="absolute inset-2 bg-white dark:bg-slate-800 rounded-full flex flex-col items-center justify-center z-10">
-                                        <span className="text-2xl font-black text-teal-600">ON</span>
-                                        <span className="text-[10px] text-slate-400 uppercase">Looping</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex gap-4 w-full">
-                                    <button onClick={() => playLoop(loopBuffer)} className="flex-1 bg-teal-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-teal-700 flex items-center justify-center gap-2">
-                                        <Icon name="repeat" size={18} /> Re-Sync
-                                    </button>
-                                    <button onClick={clearLoop} className="px-6 py-3 bg-red-50 text-red-500 rounded-xl font-bold hover:bg-red-100 flex items-center justify-center gap-2">
-                                        <Icon name="trash" size={18} /> Borrar
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        
-                        <p className="text-xs text-slate-400 mt-2">
-                            {status === 'recording' ? 'Grabando... Pulsa para crear el bucle.' : 
-                             status === 'playing' ? 'El loop está en memoria (sin latencia).' : 
-                             'Pulsa para grabar tu base rítmica.'}
-                        </p>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- COMPONENTE: PAD PLAYER (Worship Pads Persistentes) ---
-        const PadPlayer = ({ activeKey, setActiveKey, isPlaying, setIsPlaying }) => {
-            const [volume, setVolume] = useState(0.3);
-            
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full">
-                            <Icon name="layers" size={24} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold dark:text-white">Worship Pads</h2>
-                            <p className="text-xs text-slate-500">Sonido ambiental continuo</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2 mb-6">
-                        {NOTES.map((note) => (
-                            <button
-                                key={note}
-                                onClick={() => { setActiveKey(note); if(!isPlaying) setIsPlaying(true); }}
-                                className={`p-3 rounded-xl font-bold text-sm transition-all ${activeKey === note && isPlaying ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'}`}
-                            >
-                                {note}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl">
-                        <button 
-                            onClick={() => setIsPlaying(!isPlaying)}
-                            className={`p-4 rounded-full text-white shadow-md transition-transform active:scale-95 ${isPlaying ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-400 hover:bg-slate-500'}`}
-                        >
-                            <Icon name={isPlaying ? "pause" : "play"} fill="currentColor" />
-                        </button>
-                        <div className="flex-1">
-                             <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Volumen Master</label>
-                             <input 
-                                type="range" 
-                                min="0" max="1" step="0.01" 
-                                value={volume} 
-                                onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    setVolume(val);
-                                    // Dispatch custom event to update volume in engine
-                                    window.dispatchEvent(new CustomEvent('gwt-pad-volume', { detail: val }));
-                                }}
-                                className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600"
-                             />
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- COMPONENTS: SONGBOOK (Restaurado) ---
         const SongBook = () => {
             const [songs, setSongs] = useState([]);
             const [view, setView] = useState('list');
@@ -1792,118 +1258,42 @@
             useEffect(() => { const saved = localStorage.getItem('gwt_songs'); if (saved) setSongs(JSON.parse(saved)); }, []);
             useEffect(() => { localStorage.setItem('gwt_songs', JSON.stringify(songs)); }, [songs]);
             const saveSong = (e) => { e.preventDefault(); const formData = new FormData(e.target); const newSong = { id: currentSong?.id || Date.now().toString(), title: formData.get('title'), artist: formData.get('artist'), key: formData.get('key'), bpm: formData.get('bpm'), lyrics: formData.get('lyrics') }; if (currentSong) setSongs(songs.map(s => s.id === currentSong.id ? newSong : s)); else setSongs([...songs, newSong]); setView('list'); setCurrentSong(null); };
-            
-            const deleteSong = (id) => { 
-                dialog.confirm({
-                    title: "¿Eliminar canción?",
-                    message: "¿Estás seguro de que deseas eliminar esta canción de tu repertorio?",
-                    type: 'confirm',
-                    onConfirm: () => setSongs(songs.filter(s => s.id !== id))
-                });
-            };
-
-            const exportSongs = () => {
-                const dataStr = JSON.stringify(songs, null, 2);
-                const blob = new Blob([dataStr], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `repertorio_gw_${new Date().toISOString().slice(0,10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            };
-
-            const importSongs = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const imported = JSON.parse(event.target.result);
-                        if (Array.isArray(imported)) {
-                            dialog.confirm({
-                                title: "Importar repertorio",
-                                message: `Se encontraron ${imported.length} canciones. ¿Deseas fusionarlas con tu lista actual o reemplazarla?`,
-                                type: 'confirm',
-                                onConfirm: () => {
-                                    setSongs(prev => {
-                                        const newSongs = [...prev];
-                                        imported.forEach(imp => {
-                                            if (!newSongs.find(s => s.id === imp.id)) newSongs.push({...imp, id: Date.now() + Math.random().toString()});
-                                        });
-                                        return newSongs;
-                                    });
-                                    dialog.alert({ title: "¡Éxito!", message: "Canciones importadas correctamente." });
-                                }
-                            });
-                        }
-                    } catch (err) {
-                        dialog.alert({ title: "Error", message: "El archivo no tiene un formato válido." });
-                    }
-                };
-                reader.readAsText(file);
-                e.target.value = null; 
-            };
-
+            const deleteSong = (id) => { dialog.confirm({ title: "¿Eliminar canción?", message: "¿Estás seguro de que deseas eliminar esta canción de tu repertorio?", type: 'confirm', onConfirm: () => setSongs(songs.filter(s => s.id !== id)) }); };
+            const exportSongs = () => { const dataStr = JSON.stringify(songs, null, 2); const blob = new Blob([dataStr], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `repertorio_gw_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); };
+            const importSongs = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const imported = JSON.parse(event.target.result); if (Array.isArray(imported)) { dialog.confirm({ title: "Importar repertorio", message: `Se encontraron ${imported.length} canciones. ¿Deseas fusionarlas con tu lista actual o reemplazarla?`, type: 'confirm', onConfirm: () => { setSongs(prev => { const newSongs = [...prev]; imported.forEach(imp => { if (!newSongs.find(s => s.id === imp.id)) newSongs.push({...imp, id: Date.now() + Math.random().toString()}); }); return newSongs; }); dialog.alert({ title: "¡Éxito!", message: "Canciones importadas correctamente." }); } }); } } catch (err) { dialog.alert({ title: "Error", message: "El archivo no tiene un formato válido." }); } }; reader.readAsText(file); e.target.value = null; };
             const filtered = songs.filter(s => s.title.toLowerCase().includes(searchTerm.toLowerCase()));
+            
             if (view === 'form') return (<div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl"><div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold dark:text-white">{currentSong ? 'Editar' : 'Nueva'}</h2><button onClick={() => setView('list')} className="text-slate-500">Cancelar</button></div><form onSubmit={saveSong} className="space-y-4"><input name="title" required defaultValue={currentSong?.title} placeholder="Título" className="w-full p-3 bg-slate-50 dark:bg-slate-700 rounded-xl dark:text-white" /><input name="artist" defaultValue={currentSong?.artist} placeholder="Artista" className="w-full p-3 bg-slate-50 dark:bg-slate-700 rounded-xl dark:text-white" /><div className="grid grid-cols-2 gap-4"><input name="key" defaultValue={currentSong?.key} placeholder="Tono" className="w-full p-3 bg-slate-50 dark:bg-slate-700 rounded-xl dark:text-white" /><input name="bpm" type="number" defaultValue={currentSong?.bpm} placeholder="BPM" className="w-full p-3 bg-slate-50 dark:bg-slate-700 rounded-xl dark:text-white" /></div><textarea name="lyrics" defaultValue={currentSong?.lyrics} placeholder="Letra..." className="w-full h-48 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl font-mono text-sm dark:text-white" /><button type="submit" className="w-full py-4 bg-brand-600 text-white font-bold rounded-xl hover:bg-brand-700">Guardar</button></form></div>);
             return (
                 <div className="max-w-4xl mx-auto space-y-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4">
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex gap-2"><Icon name="music" className="text-brand-500" /> Repertorio</h2>
-                        <div className="flex gap-2">
-                            <input type="file" accept=".json" ref={fileInputRef} onChange={importSongs} className="hidden" />
-                            <button onClick={() => fileInputRef.current.click()} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 flex gap-2 text-sm font-bold items-center" title="Importar">
-                                <Icon name="upload" size={16} /> Importar
-                            </button>
-                            <button onClick={exportSongs} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 flex gap-2 text-sm font-bold items-center" title="Exportar Backup">
-                                <Icon name="download" size={16} /> Exportar
-                            </button>
-                            <button onClick={() => { setCurrentSong(null); setView('form'); }} className="bg-brand-600 text-white px-4 py-2 rounded-xl hover:bg-brand-700 flex gap-2 font-bold shadow-lg"><Icon name="plus" size={20} /> Nueva</button>
-                        </div>
-                    </div>
-                    <div className="relative"><div className="absolute left-4 top-3.5 text-slate-400"><Icon name="search" size={20} /></div><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" /></div><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{filtered.map(song => (<div key={song.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 group relative"><h3 className="font-bold text-lg text-slate-800 dark:text-white truncate pr-2">{song.title}</h3><p className="text-slate-500 text-sm mb-2">{song.artist}</p><div className="flex gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">{song.key && <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Key: {song.key}</span>}{song.bpm && <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">{song.bpm} BPM</span>}</div><div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 flex gap-1"><button onClick={() => { setCurrentSong(song); setView('form'); }} className="p-1.5 text-brand-500 bg-brand-50 rounded-lg"><Icon name="edit" size={16}/></button><button onClick={() => deleteSong(song.id)} className="p-1.5 text-rose-500 bg-rose-50 rounded-lg"><Icon name="trash" size={16}/></button></div></div>))}</div></div>
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4"><h2 className="text-2xl font-bold text-slate-800 dark:text-white flex gap-2"><Icon name="music" className="text-brand-500" /> Repertorio</h2><div className="flex gap-2"><input type="file" accept=".json" ref={fileInputRef} onChange={importSongs} className="hidden" /><button onClick={() => fileInputRef.current.click()} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 flex gap-2 text-sm font-bold items-center" title="Importar"><Icon name="upload" size={16} /> Importar</button><button onClick={exportSongs} className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 flex gap-2 text-sm font-bold items-center" title="Exportar Backup"><Icon name="download" size={16} /> Exportar</button><button onClick={() => { setCurrentSong(null); setView('form'); }} className="bg-brand-600 text-white px-4 py-2 rounded-xl hover:bg-brand-700 flex gap-2 font-bold shadow-lg"><Icon name="plus" size={20} /> Nueva</button></div></div>
+                    <div className="relative"><div className="absolute left-4 top-3.5 text-slate-400"><Icon name="search" size={20} /></div><input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-brand-500" /></div><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{filtered.map(song => (<div key={song.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 group relative"><h3 className="font-bold text-lg text-slate-800 dark:text-white truncate pr-2">{song.title}</h3><p className="text-slate-500 text-sm mb-2">{song.artist}</p><div className="flex gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">{song.key && <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Key: {song.key}</span>}{song.bpm && <span className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">{song.bpm} BPM</span>}</div><div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 flex gap-1"><button onClick={() => { setCurrentSong(song); setView('form'); }} className="p-1.5 text-brand-500 bg-brand-50 rounded-lg"><Icon name="edit" size={16}/></button><button onClick={() => deleteSong(song.id)} className="p-1.5 text-rose-500 bg-rose-50 rounded-lg"><Icon name="trash" size={16}/></button></div></div>))}</div>
+                </div>
             );
         };
 
+        const Footer = () => (<footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">Copyright © 2026 LUFTMANDMAURICIO</footer>);
 
-        const Footer = () => (
-            <footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">
-                Copyright © 2026 LUFTMANDMAURICIO
-            </footer>
-        );
-
-        // --- APP PRINCIPAL ---
         const App = () => {
             const [view, setView] = useState('home');
             const [darkMode, setDarkMode] = useState(false);
             const [updateTrigger, setUpdateTrigger] = useState(0);
-            
-            // PWA Install State
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [showInstall, setShowInstall] = useState(false);
-
-            // Estado de Pads (Levantado para persistencia)
             const [padKey, setPadKey] = useState('C');
             const [isPadPlaying, setIsPadPlaying] = useState(false);
             const { resume, getContext } = useAudioContext();
             
-            // --- ENGINE DE PADS (Persistente) ---
             const padNodesRef = useRef([]);
             const padGainRef = useRef(null);
 
             useEffect(() => {
                 const ctx = getContext();
                 if(!ctx) return;
-                
-                // Master Gain for Pads
                 const masterGain = ctx.createGain();
-                masterGain.gain.value = 0.3; // Initial volume
+                masterGain.gain.value = 0.3; 
                 masterGain.connect(ctx.destination);
                 padGainRef.current = masterGain;
-
                 const handleVolume = (e) => { if(padGainRef.current) padGainRef.current.gain.setTargetAtTime(e.detail, ctx.currentTime, 0.1); };
                 window.addEventListener('gwt-pad-volume', handleVolume);
                 return () => window.removeEventListener('gwt-pad-volume', handleVolume);
@@ -1912,54 +1302,47 @@
             useEffect(() => {
                 const ctx = getContext();
                 if(!ctx) return;
-
-                // Stop old nodes
-                padNodesRef.current.forEach(node => {
-                    try {
-                        node.gainNode.gain.setTargetAtTime(0, ctx.currentTime, 1); // Fade out
-                        setTimeout(() => node.osc.stop(), 1100);
-                    } catch(e) {}
+                
+                // Stop old nodes with extreme caution
+                padNodesRef.current.forEach(node => { 
+                    try { 
+                        if(node.gainNode) node.gainNode.gain.setTargetAtTime(0, ctx.currentTime, 1); 
+                        setTimeout(() => { try { node.osc.stop(); } catch(e){} }, 1100); 
+                    } catch(e) {} 
                 });
                 padNodesRef.current = [];
 
-                if (isPadPlaying) {
+                if (isPadPlaying && padGainRef.current) {
                     resume();
-                    
-                    // Create simple ambient drone (Root + 5th + Octave)
                     const rootIndex = NOTES.indexOf(padKey);
-                    // Base frequency for octave 3
                     const baseFreq = 130.81 * Math.pow(2, rootIndex / 12); 
-
-                    const freqs = [
-                        baseFreq,           // Root
-                        baseFreq * 1.5,     // 5th
-                        baseFreq * 2        // Octave
-                    ];
-
-                    freqs.forEach((freq, i) => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        const filter = ctx.createBiquadFilter();
-
-                        osc.type = 'sawtooth';
-                        osc.frequency.value = freq + (Math.random() * 2 - 1); // Slight detune for warmth
-
-                        filter.type = 'lowpass';
-                        filter.frequency.value = 600; // Mellow sound
-                        
-                        osc.connect(filter);
-                        filter.connect(gain);
-                        gain.connect(padGainRef.current);
-
-                        gain.gain.setValueAtTime(0, ctx.currentTime);
-                        gain.gain.linearRampToValueAtTime(0.2 / (i+1), ctx.currentTime + 2); // Fade in
-
-                        osc.start();
-                        padNodesRef.current.push({ osc, gainNode: gain });
+                    const freqs = [baseFreq, baseFreq * 1.5, baseFreq * 2];
+                    
+                    freqs.forEach((freq, i) => { 
+                        try {
+                            const osc = ctx.createOscillator(); 
+                            const gain = ctx.createGain(); 
+                            const filter = ctx.createBiquadFilter(); 
+                            osc.type = 'sawtooth'; 
+                            osc.frequency.value = freq + (Math.random() * 2 - 1); 
+                            filter.type = 'lowpass'; 
+                            filter.frequency.value = 600; 
+                            
+                            osc.connect(filter); 
+                            filter.connect(gain); 
+                            if(padGainRef.current) {
+                                gain.connect(padGainRef.current); 
+                                gain.gain.setValueAtTime(0, ctx.currentTime); 
+                                gain.gain.linearRampToValueAtTime(0.2 / (i+1), ctx.currentTime + 2); 
+                                osc.start(); 
+                                padNodesRef.current.push({ osc, gainNode: gain }); 
+                            }
+                        } catch(e) {
+                            console.error("Pad Error", e);
+                        }
                     });
                 }
             }, [isPadPlaying, padKey]);
-
 
             useEffect(() => {
                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
@@ -1967,191 +1350,38 @@
                 const handleStatsUpdate = () => setUpdateTrigger(p => p + 1);
                 window.addEventListener('storage', handleStorage);
                 window.addEventListener('gwt-stats-updated', handleStatsUpdate);
-                
-                // PWA Install Event
-                const handleInstallPrompt = (e) => {
-                    e.preventDefault();
-                    setDeferredPrompt(e);
-                    setShowInstall(true);
-                };
+                const handleInstallPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
                 window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-
-                return () => {
-                    window.removeEventListener('storage', handleStorage);
-                    window.removeEventListener('gwt-stats-updated', handleStatsUpdate);
-                    window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-                };
+                return () => { window.removeEventListener('storage', handleStorage); window.removeEventListener('gwt-stats-updated', handleStatsUpdate); window.removeEventListener('beforeinstallprompt', handleInstallPrompt); };
             }, []);
 
             useEffect(() => { darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark'); }, [darkMode]);
 
-            const installApp = async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    setDeferredPrompt(null);
-                    setShowInstall(false);
-                }
-            };
-
-            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => {
-                if (isAction) {
-                    return (
-                        <button onClick={onClick} className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10">
-                            <div className="p-2 rounded-full"><Icon name={icon} size={24} /></div>
-                            <span className="text-[10px] font-bold">{label}</span>
-                        </button>
-                    );
-                }
-                return (
-                    <button onClick={() => setView(id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full ${view === id ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}>
-                        <div className={`p-2 rounded-full transition-all ${view === id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}><Icon name={icon} size={24} /></div>
-                        <span className="text-[10px] font-bold">{label}</span>
-                    </button>
-                );
-            };
+            const installApp = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { setDeferredPrompt(null); setShowInstall(false); } };
+            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { if (isAction) { return (<button onClick={onClick} className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10"><div className="p-2 rounded-full"><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); } return (<button onClick={() => setView(id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full ${view === id ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><div className={`p-2 rounded-full transition-all ${view === id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); };
 
             return (
-                <DialogProvider> {/* IMPORTANTE: Todo debe estar dentro del provider */}
+                <DialogProvider>
                     <div className="min-h-screen pb-24 md:pb-0 md:pl-24 flex flex-col">
-                        {/* PC SIDEBAR FIXED (UPDATED FOR SCROLL) */}
                         <nav className="hidden md:flex fixed left-0 top-0 h-screen w-24 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col z-50">
-                            {/* 1. Logo (Fijo) */}
-                            <div className="flex justify-center w-full py-6 shrink-0">
-                                <div className="w-12 h-12 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-600/30">GW</div>
-                            </div>
-
-                            {/* 2. Menu Items (Scrollable) */}
-                            <div className="flex-1 overflow-y-auto w-full px-2 flex flex-col items-center gap-3 no-scrollbar py-2">
-                                <NavItem id="home" icon="home" label="Inicio" />
-                                <NavItem id="tuner" icon="mic" label="Afinar" />
-                                <NavItem id="metronome" icon="activity" label="Tempo" />
-                                <NavItem id="pads" icon="layers" label="Pads" /> 
-                                <NavItem id="looper" icon="repeat" label="Looper" /> {/* NUEVO */}
-                                <NavItem id="recorder" icon="mic" label="Ideas" /> 
-                                <NavItem id="routine" icon="zap" label="Rutinas" />
-                                <NavItem id="scales" icon="grid" label="Escalas" />
-                                <NavItem id="ear" icon="ear" label="Oído" /> 
-                                <NavItem id="analyze" icon="analyze" label="Teoría" />
-                                <NavItem id="songs" icon="book" label="Songs" />
-                                {showInstall && <div className="w-full border-t border-slate-100 dark:border-slate-800 my-2"></div>}
-                                {showInstall && <NavItem id="install" icon="download" label="Instalar" isAction={true} onClick={installApp} />}
-                            </div>
-
-                            {/* 3. Dark Mode Toggle (Fijo) */}
-                            <div className="flex justify-center w-full py-6 shrink-0">
-                                <button 
-                                    onClick={() => setDarkMode(!darkMode)} 
-                                    className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-brand-600 dark:text-slate-400 rounded-full transition-all hover:scale-110 shadow-sm border border-slate-200 dark:border-slate-700" 
-                                    title="Modo Oscuro/Claro"
-                                >
-                                    <Icon name={darkMode ? "sun" : "moon"} size={22} />
-                                </button>
-                            </div>
+                            <div className="flex justify-center w-full py-6 shrink-0"><div className="w-12 h-12 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-brand-600/30">GW</div></div>
+                            <div className="flex-1 overflow-y-auto w-full px-2 flex flex-col items-center gap-3 no-scrollbar py-2"><NavItem id="home" icon="home" label="Inicio" /><NavItem id="tuner" icon="mic" label="Afinar" /><NavItem id="tracks" icon="music" label="Pistas" /><NavItem id="metronome" icon="activity" label="Tempo" /><NavItem id="pads" icon="layers" label="Pads" /><NavItem id="looper" icon="repeat" label="Looper" /><NavItem id="recorder" icon="mic" label="Ideas" /><NavItem id="routine" icon="zap" label="Rutinas" /><NavItem id="scales" icon="grid" label="Escalas" /><NavItem id="ear" icon="ear" label="Oído" /><NavItem id="analyze" icon="analyze" label="Teoría" /><NavItem id="songs" icon="book" label="Songs" />{showInstall && <div className="w-full border-t border-slate-100 dark:border-slate-800 my-2"></div>}{showInstall && <NavItem id="install" icon="download" label="Instalar" isAction={true} onClick={installApp} />}</div>
+                            <div className="flex justify-center w-full py-6 shrink-0"><button onClick={() => setDarkMode(!darkMode)} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-brand-600 dark:text-slate-400 rounded-full transition-all hover:scale-110 shadow-sm border border-slate-200 dark:border-slate-700" title="Modo Oscuro/Claro"><Icon name={darkMode ? "sun" : "moon"} size={22} /></button></div>
                         </nav>
-
-                        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 z-50 px-2 py-2 flex justify-between items-center safe-area-pb overflow-x-auto no-scrollbar">
-                            <NavItem id="home" icon="home" label="Inicio" />
-                            <NavItem id="pads" icon="layers" label="Pads" />
-                            <NavItem id="looper" icon="repeat" label="Loop" />
-                            <NavItem id="metronome" icon="activity" label="Tempo" />
-                            <NavItem id="songs" icon="book" label="Songs" />
-                            {showInstall && <NavItem id="install" icon="download" label="App" isAction={true} onClick={installApp} />}
-                        </nav>
-
+                        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 z-50 px-2 py-2 flex justify-between items-center safe-area-pb overflow-x-auto no-scrollbar"><NavItem id="home" icon="home" label="Inicio" /><NavItem id="tuner" icon="mic" label="Afinar" /><NavItem id="tracks" icon="music" label="Pistas" /><NavItem id="looper" icon="repeat" label="Loop" /><NavItem id="metronome" icon="activity" label="Tempo" />{showInstall && <NavItem id="install" icon="download" label="App" isAction={true} onClick={installApp} />}</nav>
                         <main className="max-w-5xl mx-auto p-6 md:p-12 animate-fade-in flex-grow w-full">
                             <div className="flex justify-end md:hidden mb-6"><button onClick={() => setDarkMode(!darkMode)} className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-slate-500"><Icon name={darkMode ? "sun" : "moon"} size={20} /></button></div>
-                            
-                            {/* MINI REPRODUCTOR FLOTANTE PARA PADS */}
-                            {isPadPlaying && view !== 'pads' && (
-                                <div onClick={() => setView('pads')} className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl z-[60] cursor-pointer animate-pulse-ring flex items-center justify-center">
-                                    <Icon name="layers" size={24} />
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{padKey}</span>
-                                </div>
-                            )}
-
+                            {isPadPlaying && view !== 'pads' && (<div onClick={() => setView('pads')} className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl z-[60] cursor-pointer animate-pulse-ring flex items-center justify-center"><Icon name="layers" size={24} /><span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{padKey}</span></div>)}
                             {view === 'home' && (
                                 <div className="space-y-8 py-8">
-                                    <div className="text-center space-y-4">
-                                        <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight">Guitar <span className="text-brand-600">Worship</span> Trainer</h1>
-                                        <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-lg">Tu compañero de ensayo todo en uno.</p>
-                                        <div className="max-w-md mx-auto mt-6"><ProgressStats key={updateTrigger} /></div>
-                                    </div>
-
-                                    {/* SECCIÓN 1: HERRAMIENTAS */}
-                                    <div>
-                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Herramientas</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            <div onClick={() => setView('tuner')} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-xl shadow-indigo-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Afinador</h3>
-                                                <p className="text-xs opacity-90 mt-1">Cromático</p>
-                                            </div>
-                                            <div onClick={() => setView('metronome')} className="bg-gradient-to-br from-rose-500 to-orange-500 p-6 rounded-2xl shadow-xl shadow-rose-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="activity" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Metrónomo</h3>
-                                                <p className="text-xs opacity-90 mt-1">Speed Trainer</p>
-                                            </div>
-                                            <div onClick={() => setView('pads')} className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-2xl shadow-xl shadow-blue-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="layers" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Worship Pads</h3>
-                                                <p className="text-xs opacity-90 mt-1">Ambiente continuo</p>
-                                            </div>
-                                            <div onClick={() => setView('looper')} className="bg-gradient-to-br from-teal-500 to-emerald-600 p-6 rounded-2xl shadow-xl shadow-teal-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="repeat" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Jam Looper</h3>
-                                                <p className="text-xs opacity-90 mt-1">Graba & Toca encima</p>
-                                            </div>
-                                            <div onClick={() => setView('recorder')} className="bg-gradient-to-br from-red-500 to-pink-600 p-6 rounded-2xl shadow-xl shadow-red-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Grabadora</h3>
-                                                <p className="text-xs opacity-90 mt-1">Ideas & Riffs</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* SECCIÓN 2: PRÁCTICA */}
-                                    <div>
-                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Entrenamiento</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            <div onClick={() => setView('routine')} className="bg-gradient-to-br from-amber-500 to-yellow-600 p-6 rounded-2xl shadow-xl shadow-amber-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="zap" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Rutinas</h3>
-                                                <p className="text-xs opacity-90 mt-1">Eléctrica</p>
-                                            </div>
-                                            <div onClick={() => setView('scales')} className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl shadow-xl shadow-emerald-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="grid" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Escalas</h3>
-                                                <p className="text-xs opacity-90 mt-1">Mástil & Tríadas</p>
-                                            </div>
-                                            <div onClick={() => setView('ear')} className="bg-gradient-to-br from-fuchsia-500 to-pink-600 p-6 rounded-2xl shadow-xl shadow-fuchsia-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="ear" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Oído</h3>
-                                                <p className="text-xs opacity-90 mt-1">Entrenador</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* SECCIÓN 3: CONOCIMIENTO */}
-                                    <div>
-                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Conocimiento</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                            <div onClick={() => setView('analyze')} className="bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 rounded-2xl shadow-xl shadow-violet-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white">
-                                                <div className="mb-3 opacity-80"><Icon name="analyze" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Teoría</h3>
-                                                <p className="text-xs opacity-90 mt-1">Analizador</p>
-                                            </div>
-                                            <div onClick={() => setView('songs')} className="bg-gradient-to-br from-cyan-500 to-blue-600 p-6 rounded-2xl shadow-xl shadow-cyan-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white md:col-span-2">
-                                                <div className="mb-3 opacity-80"><Icon name="book" size={24} /></div>
-                                                <h3 className="font-bold text-lg">Repertorio</h3>
-                                                <p className="text-xs opacity-90 mt-1">Gestiona tus canciones y letras.</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <div className="text-center space-y-4"><h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight">Guitar <span className="text-brand-600">Worship</span> Trainer</h1><p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-lg">Tu compañero de ensayo todo en uno.</p><div className="max-w-md mx-auto mt-6"><ProgressStats key={updateTrigger} /></div></div>
+                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Herramientas</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('tuner')} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-xl shadow-indigo-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div><h3 className="font-bold text-lg">Afinador</h3><p className="text-xs opacity-90 mt-1">Cromático</p></div><div onClick={() => setView('tracks')} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-2xl shadow-xl shadow-indigo-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="music" size={24} /></div><h3 className="font-bold text-lg">Pistas</h3><p className="text-xs opacity-90 mt-1">Cargar MP3 & Loop</p></div><div onClick={() => setView('metronome')} className="bg-gradient-to-br from-rose-500 to-orange-500 p-6 rounded-2xl shadow-xl shadow-rose-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="activity" size={24} /></div><h3 className="font-bold text-lg">Metrónomo</h3><p className="text-xs opacity-90 mt-1">Speed Trainer</p></div><div onClick={() => setView('pads')} className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-2xl shadow-xl shadow-blue-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="layers" size={24} /></div><h3 className="font-bold text-lg">Worship Pads</h3><p className="text-xs opacity-90 mt-1">Ambiente continuo</p></div><div onClick={() => setView('looper')} className="bg-gradient-to-br from-teal-500 to-emerald-600 p-6 rounded-2xl shadow-xl shadow-teal-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="repeat" size={24} /></div><h3 className="font-bold text-lg">Jam Looper</h3><p className="text-xs opacity-90 mt-1">Graba & Toca encima</p></div><div onClick={() => setView('recorder')} className="bg-gradient-to-br from-red-500 to-pink-600 p-6 rounded-2xl shadow-xl shadow-red-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div><h3 className="font-bold text-lg">Grabadora</h3><p className="text-xs opacity-90 mt-1">Ideas & Riffs</p></div></div></div>
+                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Entrenamiento</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('routine')} className="bg-gradient-to-br from-amber-500 to-yellow-600 p-6 rounded-2xl shadow-xl shadow-amber-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="zap" size={24} /></div><h3 className="font-bold text-lg">Rutinas</h3><p className="text-xs opacity-90 mt-1">Eléctrica</p></div><div onClick={() => setView('scales')} className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-2xl shadow-xl shadow-emerald-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="grid" size={24} /></div><h3 className="font-bold text-lg">Escalas</h3><p className="text-xs opacity-90 mt-1">Mástil & Tríadas</p></div><div onClick={() => setView('ear')} className="bg-gradient-to-br from-fuchsia-500 to-pink-600 p-6 rounded-2xl shadow-xl shadow-fuchsia-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="ear" size={24} /></div><h3 className="font-bold text-lg">Oído</h3><p className="text-xs opacity-90 mt-1">Entrenador</p></div></div></div>
+                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Conocimiento</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('analyze')} className="bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 rounded-2xl shadow-xl shadow-violet-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="analyze" size={24} /></div><h3 className="font-bold text-lg">Teoría</h3><p className="text-xs opacity-90 mt-1">Analizador</p></div><div onClick={() => setView('songs')} className="bg-gradient-to-br from-cyan-500 to-blue-600 p-6 rounded-2xl shadow-xl shadow-cyan-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white md:col-span-2"><div className="mb-3 opacity-80"><Icon name="book" size={24} /></div><h3 className="font-bold text-lg">Repertorio</h3><p className="text-xs opacity-90 mt-1">Gestiona tus canciones y letras.</p></div></div></div>
                                 </div>
                             )}
                             {view === 'tuner' && <Tuner />}
+                            {view === 'tracks' && <TrackTrainer />}
                             {view === 'metronome' && <Metronome />}
                             {view === 'routine' && <PracticeRoutine />}
                             {view === 'analyze' && <TheoryHub />}
@@ -2162,7 +1392,6 @@
                             {view === 'looper' && <JamLooper />}
                             {view === 'pads' && <PadPlayer activeKey={padKey} setActiveKey={setPadKey} isPlaying={isPadPlaying} setIsPlaying={setIsPadPlaying} />}
                         </main>
-
                         <Footer />
                     </div>
                 </DialogProvider>
@@ -2170,7 +1399,11 @@
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
     </script>
 <script type="module" src="/index.tsx"></script>
 </body>

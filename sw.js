@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v6'; // Nivel 3 Aleatorio
+const CACHE_NAME = 'gwt-pro-v18'; // Fix Footer & Restore TrackTrainer
 const STATIC_ASSETS = [
   './',
   './index.html',
