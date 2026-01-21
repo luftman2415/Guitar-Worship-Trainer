@@ -174,6 +174,7 @@
                  repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
                  lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
                  file: <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>,
+                 check: <polyline points="20 6 9 17 4 12"></polyline>,
                  rewind: <polygon points="11 19 2 12 11 5 11 19"></polygon>
             };
 
@@ -374,367 +375,6 @@
 
         // --- COMPONENTES ---
 
-        const PracticeRoutine = () => {
-            const [tasks, setTasks] = useState(() => {
-                const saved = localStorage.getItem('gwt_routine');
-                return saved ? JSON.parse(saved) : [
-                    { id: 1, text: "Calentamiento (5 min)", done: false },
-                    { id: 2, text: "Escalas y Modos (10 min)", done: false },
-                    { id: 3, text: "Acordes y Cambios (10 min)", done: false },
-                    { id: 4, text: "Repertorio (20 min)", done: false },
-                    { id: 5, text: "Improvisación/Jam (15 min)", done: false }
-                ];
-            });
-
-            useEffect(() => {
-                localStorage.setItem('gwt_routine', JSON.stringify(tasks));
-            }, [tasks]);
-
-            const toggleTask = (id) => {
-                setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
-            };
-
-            const resetRoutine = () => {
-                if(confirm('¿Reiniciar todas las tareas?')) {
-                    setTasks(tasks.map(t => ({ ...t, done: false })));
-                }
-            };
-
-            const progress = Math.round((tasks.filter(t => t.done).length / tasks.length) * 100);
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2"><Icon name="zap" className="text-amber-500"/> Rutina Diaria</h2>
-                        <button onClick={resetRoutine} className="text-xs text-slate-400 hover:text-red-500 font-bold">Reiniciar</button>
-                    </div>
-                    <div className="mb-6">
-                        <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
-                            <span>Progreso</span>
-                            <span>{progress}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 h-3 rounded-full overflow-hidden">
-                            <div className="h-full bg-amber-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {tasks.map(task => (
-                            <div key={task.id} onClick={() => toggleTask(task.id)} className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-4 ${task.done ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'border-slate-100 dark:border-slate-700 hover:border-slate-300'}`}>
-                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${task.done ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300 dark:border-slate-500'}`}>
-                                    {task.done && <Icon name="check" size={14} />}
-                                </div>
-                                <span className={`font-bold ${task.done ? 'text-amber-700 dark:text-amber-400 line-through decoration-2' : 'text-slate-700 dark:text-slate-200'}`}>{task.text}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const SongBook = () => {
-            const [view, setView] = useState('list');
-            const [songs, setSongs] = useState(() => {
-                const saved = localStorage.getItem('gwt_songs');
-                return saved ? JSON.parse(saved) : [];
-            });
-            const [currentSong, setCurrentSong] = useState(null);
-            
-            useEffect(() => {
-                localStorage.setItem('gwt_songs', JSON.stringify(songs));
-            }, [songs]);
-
-            const saveSong = (song) => {
-                if (song.id) {
-                    setSongs(songs.map(s => s.id === song.id ? song : s));
-                } else {
-                    setSongs([...songs, { ...song, id: Date.now() }]);
-                }
-                setView('list');
-            };
-
-            const deleteSong = (id, e) => {
-                e.stopPropagation();
-                if(confirm('¿Eliminar canción?')) {
-                    setSongs(songs.filter(s => s.id !== id));
-                }
-            };
-
-            const SongEditor = ({ song = {}, onSave, onCancel }) => {
-                const [title, setTitle] = useState(song.title || '');
-                const [artist, setArtist] = useState(song.artist || '');
-                const [body, setBody] = useState(song.body || '');
-
-                return (
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
-                        <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
-                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white font-bold" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
-                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
-                        <textarea className="w-full mb-4 p-4 h-64 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 font-mono text-sm dark:text-white" placeholder="Letra y Acordes..." value={body} onChange={e => setBody(e.target.value)}></textarea>
-                        <div className="flex gap-3">
-                            <button onClick={() => onSave({ ...song, title, artist, body })} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar</button>
-                            <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold">Cancelar</button>
-                        </div>
-                    </div>
-                );
-            };
-
-            if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => setView('list')} />;
-
-            if (view === 'detail') return (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
-                    <div className="flex justify-between items-start mb-6">
-                        <button onClick={() => setView('list')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="rewind" size={20}/></button>
-                        <div className="text-center">
-                            <h2 className="text-2xl font-black dark:text-white">{currentSong.title}</h2>
-                            <p className="text-cyan-600 font-bold">{currentSong.artist}</p>
-                        </div>
-                        <button onClick={() => setView('editor')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="edit" size={20}/></button>
-                    </div>
-                    <pre className="whitespace-pre-wrap font-mono text-sm dark:text-slate-300 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl overflow-x-auto">{currentSong.body}</pre>
-                </div>
-            );
-
-            return (
-                <div className="max-w-2xl mx-auto">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2"><Icon name="book" className="text-cyan-500"/> Repertorio</h2>
-                        <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-cyan-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
-                    </div>
-                    <div className="grid gap-3">
-                        {songs.length === 0 && <p className="text-center text-slate-400 py-8 italic">No hay canciones guardadas.</p>}
-                        {songs.map(song => (
-                            <div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500 transition-colors group">
-                                <div>
-                                    <h3 className="font-bold dark:text-white">{song.title}</h3>
-                                    <p className="text-xs text-slate-500">{song.artist}</p>
-                                </div>
-                                <button onClick={(e) => deleteSong(song.id, e)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const IdeaRecorder = () => {
-            const { getContext, resume } = useAudioContext();
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordings, setRecordings] = useState([]);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
-
-            useEffect(() => { loadRecordings(); }, []);
-
-            const loadRecordings = async () => {
-                try {
-                    const recs = await getRecordingsFromDB();
-                    setRecordings(recs.sort((a,b) => b.date - a.date));
-                } catch(e) { console.error(e); }
-            };
-
-            const startRecording = async () => {
-                await resume();
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorderRef.current = new MediaRecorder(stream);
-                    chunksRef.current = [];
-                    mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
-                    mediaRecorderRef.current.onstop = async () => {
-                        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                        const id = Date.now();
-                        await saveRecordingToDB({ id, blob, date: new Date() });
-                        loadRecordings();
-                        stream.getTracks().forEach(t => t.stop());
-                    };
-                    mediaRecorderRef.current.start();
-                    setIsRecording(true);
-                } catch (e) { alert("Error al acceder al micrófono"); }
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && isRecording) {
-                    mediaRecorderRef.current.stop();
-                    setIsRecording(false);
-                }
-            };
-
-            const playRecording = (blob) => {
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
-                audio.play();
-            };
-
-            const deleteRec = async (id) => {
-                if(confirm("¿Borrar grabación?")) {
-                    await deleteRecordingFromDB(id);
-                    loadRecordings();
-                }
-            };
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                    <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">Grabadora de Ideas</h2>
-                    <div className="flex justify-center mb-8">
-                        <button onClick={isRecording ? stopRecording : startRecording} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-red-600 hover:bg-red-700 hover:scale-105'}`}>
-                            <Icon name={isRecording ? 'stop' : 'mic'} size={40} className="text-white"/>
-                        </button>
-                    </div>
-                    <div className="space-y-3">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Grabaciones Guardadas</h3>
-                        {recordings.length === 0 && <p className="text-center text-slate-400 text-sm italic">No hay grabaciones.</p>}
-                        {recordings.map(rec => (
-                            <div key={rec.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <button onClick={() => playRecording(rec.blob)} className="p-2 bg-white dark:bg-slate-600 rounded-full text-slate-700 dark:text-white shadow-sm hover:scale-110 transition-transform"><Icon name="play" size={16}/></button>
-                                    <div>
-                                        <p className="text-xs font-bold dark:text-white">Idea {new Date(rec.date).toLocaleTimeString()}</p>
-                                        <p className="text-[10px] text-slate-500">{new Date(rec.date).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => deleteRec(rec.id)} className="text-slate-400 hover:text-red-500"><Icon name="trash" size={16}/></button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const JamLooper = () => {
-            const { getContext, resume } = useAudioContext();
-            const [isRecording, setIsRecording] = useState(false);
-            const [isLooping, setIsLooping] = useState(false);
-            const [audioBuffer, setAudioBuffer] = useState(null);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
-            const sourceNodeRef = useRef(null);
-
-            const startRecording = async () => {
-                await resume();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } });
-                mediaRecorderRef.current = new MediaRecorder(stream);
-                chunksRef.current = [];
-                mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
-                mediaRecorderRef.current.onstop = async () => {
-                    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const ctx = getContext();
-                    const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-                    setAudioBuffer(decodedBuffer);
-                    stream.getTracks().forEach(t => t.stop());
-                };
-                mediaRecorderRef.current.start();
-                setIsRecording(true);
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && isRecording) {
-                    mediaRecorderRef.current.stop();
-                    setIsRecording(false);
-                }
-            };
-
-            const toggleLoop = () => {
-                const ctx = getContext();
-                if (isLooping) {
-                    if (sourceNodeRef.current) sourceNodeRef.current.stop();
-                    setIsLooping(false);
-                } else {
-                    if (!audioBuffer) return;
-                    const source = ctx.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.loop = true;
-                    source.connect(ctx.destination);
-                    source.start();
-                    sourceNodeRef.current = source;
-                    setIsLooping(true);
-                }
-            };
-
-            const clearLoop = () => {
-                if (isLooping) toggleLoop();
-                setAudioBuffer(null);
-            };
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
-                    <h2 className="text-2xl font-bold mb-8 dark:text-white">Jam Looper</h2>
-                    
-                    {!audioBuffer ? (
-                        <div className="flex justify-center">
-                            <button onClick={isRecording ? stopRecording : startRecording} className={`w-32 h-32 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all border-4 ${isRecording ? 'bg-red-500 border-red-300 animate-pulse scale-105' : 'bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-red-500 text-slate-400 hover:text-red-500'}`}>
-                                <Icon name={isRecording ? "stop" : "mic"} size={48} />
-                                <span className="text-xs font-bold uppercase mt-2">{isRecording ? "Detener" : "Grabar"}</span>
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="p-6 bg-teal-50 dark:bg-teal-900/30 rounded-2xl border border-teal-100 dark:border-teal-800">
-                                <div className="text-teal-600 dark:text-teal-400 font-bold mb-2">Loop Listo</div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{(audioBuffer.duration).toFixed(2)}s</div>
-                            </div>
-                            <div className="flex gap-4 justify-center">
-                                <button onClick={toggleLoop} className={`flex-1 py-4 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isLooping ? 'bg-amber-500' : 'bg-teal-600 hover:bg-teal-700'}`}>
-                                    <Icon name={isLooping ? "pause" : "play"} /> {isLooping ? "Pausar" : "Reproducir"}
-                                </button>
-                                <button onClick={clearLoop} className="px-6 py-4 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-red-100 hover:text-red-500 transition-colors">
-                                    <Icon name="trash" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    <p className="mt-8 text-xs text-slate-400 max-w-xs mx-auto">Graba una progresión de acordes y practica tus escalas o solos encima.</p>
-                </div>
-            );
-        };
-
-        const PadPlayer = ({ activeKey, setActiveKey, isPlaying, setIsPlaying }) => {
-            const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-            
-            const handleVolumeChange = (e) => {
-                const vol = parseFloat(e.target.value);
-                const event = new CustomEvent('gwt-pad-volume', { detail: vol });
-                window.dispatchEvent(event);
-            };
-
-            return (
-                <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                    <div className="text-center mb-8">
-                        <h2 className="text-3xl font-black mb-2 dark:text-white">Worship Pads</h2>
-                        <p className="text-slate-500 text-sm">Ambiente continuo para ministración.</p>
-                    </div>
-
-                    <div className="flex flex-col items-center mb-8">
-                        <button onClick={() => setIsPlaying(!isPlaying)} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl transition-all active:scale-95 mb-6 ${isPlaying ? 'bg-indigo-600 text-white ring-4 ring-indigo-200 dark:ring-indigo-900 animate-pulse-ring' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                            <Icon name="layers" size={40} />
-                        </button>
-                        <div className="w-full max-w-xs px-4">
-                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block text-center">Volumen</label>
-                            <input type="range" min="0" max="0.5" step="0.01" defaultValue="0.3" onChange={handleVolumeChange} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600"/>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                        {KEYS.map(k => (
-                            <button key={k} onClick={() => setActiveKey(k)} className={`p-4 rounded-xl font-bold text-lg transition-all ${activeKey === k ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`}>
-                                {k}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        const Tuner = () => {
-            const { resume, getContext } = useAudioContext();
-            const [isActive, setIsActive] = useState(false); const [note, setNote] = useState('--'); const [cents, setCents] = useState(0); const [errorMsg, setErrorMsg] = useState(null); const analyserRef = useRef(null); const rafRef = useRef(null); const streamRef = useRef(null);
-            const autoCorrelate = (buf, sampleRate) => { let size = buf.length, rms = 0; for (let i = 0; i < size; i++) rms += buf[i] * buf[i]; if (Math.sqrt(rms / size) < 0.015) return -1; let r1 = 0, r2 = size - 1, thres = 0.2; for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; } for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; } const buf2 = buf.slice(r1, r2); size = buf2.length; const c = new Float32Array(size); for (let i = 0; i < size; i++) for (let j = 0; j < size - i; j++) c[i] = c[i] + buf2[j] * buf2[j + i]; let d = 0; while (c[d] > c[d + 1]) d++; let maxval = -1, maxpos = -1; for (let i = d; i < size; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; } let T0 = maxpos; const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]; const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2; if (a) T0 = T0 - b / (2 * a); return sampleRate / T0; };
-            const updatePitch = () => { const ctx = getContext(); if (!analyserRef.current || !ctx) return; const buf = new Float32Array(2048); analyserRef.current.getFloatTimeDomainData(buf); const ac = autoCorrelate(buf, ctx.sampleRate); if (ac !== -1) { const noteNum = 12 * (Math.log(ac / 440) / Math.log(2)); const noteRaw = Math.round(noteNum) + 69; setNote(NOTES[noteRaw % 12]); setCents(Math.floor(1200 * Math.log2(ac / (440 * Math.pow(2, (noteRaw - 69) / 12))))); } rafRef.current = requestAnimationFrame(updatePitch); };
-            const toggleTuner = async () => { if (isActive) { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); setIsActive(false); setNote('--'); setCents(0); } else { setErrorMsg(null); await resume(); const ctx = getContext(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); streamRef.current = stream; const source = ctx.createMediaStreamSource(stream); const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); analyserRef.current = analyser; setIsActive(true); updatePitch(); } catch (err) { setErrorMsg("Error: Permiso de micrófono denegado."); } } };
-            useEffect(() => () => { if(isActive) toggleTuner(); }, []);
-            const isInTune = isActive && note !== '--' && Math.abs(cents) < 5; const colorClass = !isActive ? 'text-slate-300' : isInTune ? 'text-emerald-500' : 'text-amber-500';
-            return (<div className="flex flex-col items-center p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm mx-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Afinador</h2>{errorMsg && <div className="mb-4 p-2 bg-red-100 text-red-600 text-xs rounded">{errorMsg}</div>}<div className="relative w-64 h-64 mb-8"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className="absolute inset-0 flex flex-col items-center justify-center"><span className={`text-8xl font-black ${colorClass} transition-colors`}>{note}</span><span className="text-slate-400 font-mono mt-2">{isActive ? (note !== '--' ? `${cents > 0 ? '+' : ''}${cents}` : 'Escuchando...') : 'OFF'}</span></div>{isActive && note !== '--' && (<div className={`absolute top-0 left-1/2 w-2 h-8 -ml-1 rounded-full origin-bottom transition-all duration-100 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ top: '-10px', height: '30px', transformOrigin: '50% 138px', transform: `rotate(${cents * 1.5}deg)` }} />)}</div><div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden relative"><div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10"></div>{isActive && note !== '--' && <div className={`h-full transition-all duration-75 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '10%', position: 'absolute', left: `calc(50% + ${cents}%)`, transform: 'translateX(-50%)', borderRadius: '99px' }}></div>}</div><button onClick={toggleTuner} className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-white transition-all w-full justify-center shadow-lg ${isActive ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isActive ? "micOff" : "mic"} /> {isActive ? "Detener" : "Activar Micrófono"}</button></div>);
-        };
-
         const ProgressStats = () => {
             const [stats, setStats] = useState({ streak: 0, totalMinutes: 0, lastDate: null });
             const dialog = useDialog();
@@ -814,6 +454,17 @@
             
             localStorage.setItem('gwt_stats', JSON.stringify(newStats));
             window.dispatchEvent(new Event('gwt-stats-updated'));
+        };
+
+        const Tuner = () => {
+            const { resume, getContext } = useAudioContext();
+            const [isActive, setIsActive] = useState(false); const [note, setNote] = useState('--'); const [cents, setCents] = useState(0); const [errorMsg, setErrorMsg] = useState(null); const analyserRef = useRef(null); const rafRef = useRef(null); const streamRef = useRef(null);
+            const autoCorrelate = (buf, sampleRate) => { let size = buf.length, rms = 0; for (let i = 0; i < size; i++) rms += buf[i] * buf[i]; if (Math.sqrt(rms / size) < 0.015) return -1; let r1 = 0, r2 = size - 1, thres = 0.2; for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; } for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; } const buf2 = buf.slice(r1, r2); size = buf2.length; const c = new Float32Array(size); for (let i = 0; i < size; i++) for (let j = 0; j < size - i; j++) c[i] = c[i] + buf2[j] * buf2[j + i]; let d = 0; while (c[d] > c[d + 1]) d++; let maxval = -1, maxpos = -1; for (let i = d; i < size; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; } let T0 = maxpos; const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]; const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2; if (a) T0 = T0 - b / (2 * a); return sampleRate / T0; };
+            const updatePitch = () => { const ctx = getContext(); if (!analyserRef.current || !ctx) return; const buf = new Float32Array(2048); analyserRef.current.getFloatTimeDomainData(buf); const ac = autoCorrelate(buf, ctx.sampleRate); if (ac !== -1) { const noteNum = 12 * (Math.log(ac / 440) / Math.log(2)); const noteRaw = Math.round(noteNum) + 69; setNote(NOTES[noteRaw % 12]); setCents(Math.floor(1200 * Math.log2(ac / (440 * Math.pow(2, (noteRaw - 69) / 12))))); } rafRef.current = requestAnimationFrame(updatePitch); };
+            const toggleTuner = async () => { if (isActive) { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); setIsActive(false); setNote('--'); setCents(0); } else { setErrorMsg(null); await resume(); const ctx = getContext(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); streamRef.current = stream; const source = ctx.createMediaStreamSource(stream); const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); analyserRef.current = analyser; setIsActive(true); updatePitch(); } catch (err) { setErrorMsg("Error: Permiso de micrófono denegado."); } } };
+            useEffect(() => () => { if(isActive) toggleTuner(); }, []);
+            const isInTune = isActive && note !== '--' && Math.abs(cents) < 5; const colorClass = !isActive ? 'text-slate-300' : isInTune ? 'text-emerald-500' : 'text-amber-500';
+            return (<div className="flex flex-col items-center p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm mx-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Afinador</h2>{errorMsg && <div className="mb-4 p-2 bg-red-100 text-red-600 text-xs rounded">{errorMsg}</div>}<div className="relative w-64 h-64 mb-8"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className="absolute inset-0 flex flex-col items-center justify-center"><span className={`text-8xl font-black ${colorClass} transition-colors`}>{note}</span><span className="text-slate-400 font-mono mt-2">{isActive ? (note !== '--' ? `${cents > 0 ? '+' : ''}${cents}` : 'Escuchando...') : 'OFF'}</span></div>{isActive && note !== '--' && (<div className={`absolute top-0 left-1/2 w-2 h-8 -ml-1 rounded-full origin-bottom transition-all duration-100 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ top: '-10px', height: '30px', transformOrigin: '50% 138px', transform: `rotate(${cents * 1.5}deg)` }} />)}</div><div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden relative"><div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10"></div>{isActive && note !== '--' && <div className={`h-full transition-all duration-75 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '10%', position: 'absolute', left: `calc(50% + ${cents}%)`, transform: 'translateX(-50%)', borderRadius: '99px' }}></div>}</div><button onClick={toggleTuner} className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-white transition-all w-full justify-center shadow-lg ${isActive ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isActive ? "micOff" : "mic"} /> {isActive ? "Detener" : "Activar Micrófono"}</button></div>);
         };
 
         const ChordAnalyzer = () => {
@@ -1513,6 +1164,531 @@
             return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden"><div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
         };
 
+        const PracticeRoutine = () => {
+            const [view, setView] = useState('landing'); // landing, list, active
+            const [currentExercise, setCurrentExercise] = useState(null);
+            const [timer, setTimer] = useState(0);
+            const [isActive, setIsActive] = useState(false);
+            const [customTime, setCustomTime] = useState(5); // Default 5 mins
+            const intervalRef = useRef(null);
+
+            const EXERCISES = [
+                { id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 },
+                { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 },
+                { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 },
+                { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 },
+                { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }
+            ];
+
+            useEffect(() => {
+                if (isActive && timer > 0) {
+                    intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000);
+                } else if (timer === 0) {
+                    setIsActive(false);
+                    if(intervalRef.current) clearInterval(intervalRef.current);
+                }
+                return () => clearInterval(intervalRef.current);
+            }, [isActive, timer]);
+
+            const startExercise = (ex) => {
+                setCurrentExercise(ex);
+                setCustomTime(ex.defaultTime);
+                setTimer(ex.defaultTime * 60);
+                setIsActive(false);
+                setView('active');
+            };
+
+            const toggleTimer = () => setIsActive(!isActive);
+            const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); };
+            
+            const adjustTime = (delta) => {
+                const newTime = Math.max(1, customTime + delta);
+                setCustomTime(newTime);
+                if (!isActive) setTimer(newTime * 60);
+            };
+
+            const formatTime = (seconds) => {
+                const m = Math.floor(seconds / 60);
+                const s = seconds % 60;
+                return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            };
+
+            if (view === 'landing') return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
+                    <div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Icon name="zap" size={48} />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p>
+                    <button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">
+                        Generar Nueva Rutina
+                    </button>
+                </div>
+            );
+
+            if (view === 'list') return (
+                <div className="max-w-xl mx-auto space-y-6 animate-fade-in">
+                    <div className="flex justify-between items-center px-2">
+                        <h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2>
+                        <button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button>
+                    </div>
+                    <div className="space-y-4">
+                        {EXERCISES.map((ex) => (
+                            <div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                                <div>
+                                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span>
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p>
+                                </div>
+                                <button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">
+                                    Practicar
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
+                    <button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="rewind" size={20} /></button>
+                    <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span>
+                    <h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p>
+                    
+                    <div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center">
+                        <div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div>
+                        <div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div>
+                        <div className="flex flex-col items-center z-10">
+                            <span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>
+                            {!isActive && <div className="flex gap-4 mt-2">
+                                <button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button>
+                                <span className="text-xs font-bold text-slate-500">{customTime} min</span>
+                                <button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button>
+                            </div>}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 justify-center">
+                        <button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                            <Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" />
+                        </button>
+                        <button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600">
+                            <Icon name="repeat" size={24} />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const SongBook = () => {
+            const [view, setView] = useState('list');
+            const [songs, setSongs] = useState(() => {
+                const saved = localStorage.getItem('gwt_songs');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [currentSong, setCurrentSong] = useState(null);
+            
+            useEffect(() => {
+                localStorage.setItem('gwt_songs', JSON.stringify(songs));
+            }, [songs]);
+
+            const saveSong = (song) => {
+                if (song.id) {
+                    setSongs(songs.map(s => s.id === song.id ? song : s));
+                } else {
+                    setSongs([...songs, { ...song, id: Date.now() }]);
+                }
+                setView('list');
+            };
+
+            const deleteSong = (id, e) => {
+                e.stopPropagation();
+                if(confirm('¿Eliminar canción?')) {
+                    setSongs(songs.filter(s => s.id !== id));
+                }
+            };
+
+            const SongEditor = ({ song = {}, onSave, onCancel }) => {
+                const [title, setTitle] = useState(song.title || '');
+                const [artist, setArtist] = useState(song.artist || '');
+                const [body, setBody] = useState(song.body || '');
+
+                return (
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
+                        <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
+                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white font-bold" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
+                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
+                        <textarea className="w-full mb-4 p-4 h-64 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 font-mono text-sm dark:text-white" placeholder="Letra y Acordes..." value={body} onChange={e => setBody(e.target.value)}></textarea>
+                        <div className="flex gap-3">
+                            <button onClick={() => onSave({ ...song, title, artist, body })} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar</button>
+                            <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold">Cancelar</button>
+                        </div>
+                    </div>
+                );
+            };
+
+            if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => setView('list')} />;
+
+            if (view === 'detail') return (
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
+                    <div className="flex justify-between items-start mb-6">
+                        <button onClick={() => setView('list')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="rewind" size={20}/></button>
+                        <div className="text-center">
+                            <h2 className="text-2xl font-black dark:text-white">{currentSong.title}</h2>
+                            <p className="text-cyan-600 font-bold">{currentSong.artist}</p>
+                        </div>
+                        <button onClick={() => setView('editor')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="edit" size={20}/></button>
+                    </div>
+                    <pre className="whitespace-pre-wrap font-mono text-sm dark:text-slate-300 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl overflow-x-auto">{currentSong.body}</pre>
+                </div>
+            );
+
+            return (
+                <div className="max-w-2xl mx-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2"><Icon name="book" className="text-cyan-500"/> Repertorio</h2>
+                        <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-cyan-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
+                    </div>
+                    <div className="grid gap-3">
+                        {songs.length === 0 && <p className="text-center text-slate-400 py-8 italic">No hay canciones guardadas.</p>}
+                        {songs.map(song => (
+                            <div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500 transition-colors group">
+                                <div>
+                                    <h3 className="font-bold dark:text-white">{song.title}</h3>
+                                    <p className="text-xs text-slate-500">{song.artist}</p>
+                                </div>
+                                <button onClick={(e) => deleteSong(song.id, e)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const IdeaRecorder = () => {
+            const { getContext, resume } = useAudioContext();
+            const [isRecording, setIsRecording] = useState(false);
+            const [recordings, setRecordings] = useState([]);
+            const mediaRecorderRef = useRef(null);
+            const chunksRef = useRef([]);
+
+            useEffect(() => { loadRecordings(); }, []);
+
+            const loadRecordings = async () => {
+                try {
+                    const recs = await getRecordingsFromDB();
+                    setRecordings(recs.sort((a,b) => b.date - a.date));
+                } catch(e) { console.error(e); }
+            };
+
+            const startRecording = async () => {
+                await resume();
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorderRef.current = new MediaRecorder(stream);
+                    chunksRef.current = [];
+                    mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
+                    mediaRecorderRef.current.onstop = async () => {
+                        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                        const id = Date.now();
+                        await saveRecordingToDB({ id, blob, date: new Date() });
+                        loadRecordings();
+                        stream.getTracks().forEach(t => t.stop());
+                    };
+                    mediaRecorderRef.current.start();
+                    setIsRecording(true);
+                } catch (e) { alert("Error al acceder al micrófono"); }
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && isRecording) {
+                    mediaRecorderRef.current.stop();
+                    setIsRecording(false);
+                }
+            };
+
+            const playRecording = (blob) => {
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+                audio.play();
+            };
+
+            const deleteRec = async (id) => {
+                if(confirm("¿Borrar grabación?")) {
+                    await deleteRecordingFromDB(id);
+                    loadRecordings();
+                }
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
+                    <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">Grabadora de Ideas</h2>
+                    <div className="flex justify-center mb-8">
+                        <button onClick={isRecording ? stopRecording : startRecording} className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-red-600 hover:bg-red-700 hover:scale-105'}`}>
+                            <Icon name={isRecording ? 'stop' : 'mic'} size={40} className="text-white"/>
+                        </button>
+                    </div>
+                    <div className="space-y-3">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Grabaciones Guardadas</h3>
+                        {recordings.length === 0 && <p className="text-center text-slate-400 text-sm italic">No hay grabaciones.</p>}
+                        {recordings.map(rec => (
+                            <div key={rec.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                                <div className="flex items-center gap-3">
+                                    <button onClick={() => playRecording(rec.blob)} className="p-2 bg-white dark:bg-slate-600 rounded-full text-slate-700 dark:text-white shadow-sm hover:scale-110 transition-transform"><Icon name="play" size={16}/></button>
+                                    <div>
+                                        <p className="text-xs font-bold dark:text-white">Idea {new Date(rec.date).toLocaleTimeString()}</p>
+                                        <p className="text-[10px] text-slate-500">{new Date(rec.date).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => deleteRec(rec.id)} className="text-slate-400 hover:text-red-500"><Icon name="trash" size={16}/></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const JamLooper = () => {
+            const { getContext, resume } = useAudioContext();
+            const [status, setStatus] = useState('idle'); // idle, recording, looping
+            const [audioBuffer, setAudioBuffer] = useState(null);
+            const mediaRecorderRef = useRef(null);
+            const chunksRef = useRef([]);
+            const sourceNodeRef = useRef(null);
+
+            const startRecording = async () => {
+                await resume();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
+                mediaRecorderRef.current = new MediaRecorder(stream);
+                chunksRef.current = [];
+                mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
+                mediaRecorderRef.current.onstop = async () => {
+                    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const ctx = getContext();
+                    const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+                    setAudioBuffer(decodedBuffer);
+                    stream.getTracks().forEach(t => t.stop());
+                };
+                mediaRecorderRef.current.start();
+                setStatus('recording');
+            };
+
+            const stopRecording = () => {
+                if (mediaRecorderRef.current && status === 'recording') {
+                    mediaRecorderRef.current.stop();
+                    setStatus('idle');
+                }
+            };
+
+            const playLoop = () => {
+                const ctx = getContext();
+                if (!audioBuffer) return;
+                const source = ctx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.loop = true;
+                source.connect(ctx.destination);
+                source.start();
+                sourceNodeRef.current = source;
+                setStatus('looping');
+            };
+
+            const stopLoop = () => {
+                if (sourceNodeRef.current) sourceNodeRef.current.stop();
+                setStatus('idle');
+            };
+
+            const clearLoop = () => {
+                if (status === 'looping') stopLoop();
+                setAudioBuffer(null);
+                setStatus('idle');
+            };
+
+            return (
+                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold dark:text-white">Jam Looper</h2>
+                        <p className="text-slate-500 text-xs mt-1">Graba una base y toca encima.</p>
+                    </div>
+                    
+                    {!audioBuffer && (
+                        <button onClick={status === 'recording' ? stopRecording : startRecording} className={`w-32 h-32 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all border-4 ${status === 'recording' ? 'bg-red-500 border-red-300 animate-pulse scale-105 text-white' : 'bg-slate-100 dark:bg-slate-700 border-slate-200 dark:border-slate-600 hover:border-red-500 text-slate-400 hover:text-red-500'}`}>
+                            <Icon name={status === 'recording' ? "stop" : "mic"} size={48} />
+                            <span className="text-xs font-bold uppercase mt-2">{status === 'recording' ? "Detener" : "Grabar"}</span>
+                        </button>
+                    )}
+
+                    {audioBuffer && (
+                        <div className="space-y-6">
+                            <div className="p-6 bg-teal-50 dark:bg-teal-900/30 rounded-2xl border border-teal-100 dark:border-teal-800 animate-fade-in">
+                                <div className="text-teal-600 dark:text-teal-400 font-bold mb-2 flex items-center justify-center gap-2"><Icon name="check" size={18}/> Loop Listo</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">{(audioBuffer.duration).toFixed(2)}s</div>
+                            </div>
+                            <div className="flex gap-4 justify-center">
+                                <button onClick={status === 'looping' ? stopLoop : playLoop} className={`flex-1 py-4 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${status === 'looping' ? 'bg-amber-500' : 'bg-teal-600 hover:bg-teal-700'}`}>
+                                    <Icon name={status === 'looping' ? "pause" : "play"} /> {status === 'looping' ? "Pausar" : "Loop"}
+                                </button>
+                                <button onClick={clearLoop} className="px-6 py-4 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-red-100 hover:text-red-500 transition-colors">
+                                    <Icon name="trash" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const PadPlayer = () => {
+            const [activeKey, setActiveKey] = useState(null);
+            const [volume, setVolume] = useState(0.3);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const audioCtxRef = useRef(null);
+            const gainNodeRef = useRef(null);
+            const oscillatorsRef = useRef([]);
+            
+            const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+            useEffect(() => {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioContextClass();
+                const masterGain = ctx.createGain();
+                masterGain.connect(ctx.destination);
+                masterGain.gain.value = 0;
+                
+                audioCtxRef.current = ctx;
+                gainNodeRef.current = masterGain;
+
+                return () => ctx.close();
+            }, []);
+
+            useEffect(() => {
+                if (gainNodeRef.current) {
+                    gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
+                }
+            }, [volume, isPlaying]);
+
+            useEffect(() => {
+                if (!activeKey || !isPlaying) return;
+                playPad(activeKey);
+            }, [activeKey, isPlaying]);
+
+            const playPad = (key) => {
+                const ctx = audioCtxRef.current;
+                
+                // Stop old oscillators with fade out
+                oscillatorsRef.current.forEach(({ osc, gain }) => {
+                    gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); // Fade out
+                    setTimeout(() => osc.stop(), 600);
+                });
+                oscillatorsRef.current = [];
+
+                if (!key) return;
+
+                const rootIndex = KEYS.indexOf(key);
+                // Fundamental + 5th + Octave
+                const freqs = [
+                    130.81 * Math.pow(2, rootIndex / 12), // Root
+                    130.81 * Math.pow(2, (rootIndex + 7) / 12), // 5th
+                    261.63 * Math.pow(2, rootIndex / 12) // Octave
+                ];
+
+                freqs.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const oscGain = ctx.createGain();
+                    const filter = ctx.createBiquadFilter();
+
+                    osc.type = i === 2 ? 'sine' : 'sawtooth';
+                    osc.frequency.value = freq;
+                    
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 600;
+                    filter.Q.value = 1;
+
+                    osc.connect(filter);
+                    filter.connect(oscGain);
+                    oscGain.connect(gainNodeRef.current);
+
+                    oscGain.gain.setValueAtTime(0, ctx.currentTime);
+                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1); // Fade in
+
+                    osc.start();
+                    oscillatorsRef.current.push({ osc, gain: oscGain });
+                });
+            };
+
+            const togglePlay = async () => {
+                if (audioCtxRef.current.state === 'suspended') {
+                    await audioCtxRef.current.resume();
+                }
+                const newState = !isPlaying;
+                setIsPlaying(newState);
+                if (newState && activeKey) {
+                    playPad(activeKey);
+                } else {
+                    // Stop sound immediately if stopping
+                    oscillatorsRef.current.forEach(({ osc, gain }) => {
+                        gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.1);
+                        setTimeout(() => osc.stop(), 200);
+                    });
+                    oscillatorsRef.current = [];
+                }
+            };
+
+            const selectKey = (k) => {
+                setActiveKey(k);
+                if (!isPlaying) {
+                    togglePlay(); // Auto-start on key press
+                }
+            };
+
+            return (
+                <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full">
+                            <Icon name="layers" size={32} />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black dark:text-white">Worship Pads</h2>
+                            <p className="text-slate-500 text-sm">Sonido ambiental continuo</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-3 mb-8">
+                        {KEYS.map(k => (
+                            <button 
+                                key={k} 
+                                onClick={() => selectKey(k)} 
+                                className={`py-4 rounded-xl font-bold text-lg transition-all shadow-sm ${activeKey === k && isPlaying ? 'bg-indigo-600 text-white shadow-indigo-500/50 scale-105' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                            >
+                                {k}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl flex items-center gap-6">
+                        <button onClick={togglePlay} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 ${isPlaying ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                            <Icon name={isPlaying ? "pause" : "play"} size={28} fill="currentColor" />
+                        </button>
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Volumen Master</label>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.01" 
+                                value={volume} 
+                                onChange={(e) => setVolume(parseFloat(e.target.value))} 
+                                className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600"
+                            />
+                        </div>
+                    </div>
+                    
+                    <p className="text-center text-xs text-slate-400 mt-6">Copyright © 2026 LUFTMANDMAURICIO</p>
+                </div>
+            );
+        };
+
         const Footer = () => (<footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">Copyright © 2026 LUFTMANDMAURICIO</footer>);
 
         const App = () => {
@@ -1631,7 +1807,7 @@
                             {view === 'ear' && <EarTrainer />}
                             {view === 'recorder' && <IdeaRecorder />}
                             {view === 'looper' && <JamLooper />}
-                            {view === 'pads' && <PadPlayer activeKey={padKey} setActiveKey={setPadKey} isPlaying={isPadPlaying} setIsPlaying={setIsPadPlaying} />}
+                            {view === 'pads' && <PadPlayer />}
                         </main>
                         <Footer />
                     </div>
