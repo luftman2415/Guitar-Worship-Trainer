@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v18'; // Fix Footer & Restore TrackTrainer
+const CACHE_NAME = 'gwt-pro-v20'; // Footer Fixed
 const STATIC_ASSETS = [
   './',
   './index.html',
