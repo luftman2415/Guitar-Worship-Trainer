@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v20'; // Footer Fixed
+const CACHE_NAME = 'gwt-pro-v21'; // Force update
 const STATIC_ASSETS = [
   './',
   './index.html',
