@@ -420,12 +420,12 @@
             const audioRef = useRef(null);
             const fileInputRef = useRef(null);
 
-            // CANCIONES ACTUALIZADAS SEGÚN SOLICITUD
+            // NOMBRES EXACTOS DE ARCHIVOS SEGÚN CAPTURA GITHUB
             const TEACHER_TRACKS = [
                 { title: "La Sunamita", filename: "La Sunamita.mp3" },
-                { title: "100% No hay lugar más alto", filename: "No hay lugar mas alto.mp3" },
+                { title: "100% No hay lugar más alto", filename: "100% No hay lugar mas alto.mp3" },
                 { title: "Santo es el que vive", filename: "Santo es el que vive.mp3" },
-                { title: "100% Si tu presencia conmigo no va", filename: "STPCNV.mp3" },
+                { title: "100% Si tu presencia conmigo no va", filename: "100% Si tu presencia conmigo no va.mp3" },
                 { title: "Tus cuerdas de amor", filename: "Tus cuerdas de amor.mp3" }
             ];
             
@@ -450,7 +450,8 @@
             };
 
             const loadTeacherTrack = (track) => {
-                const path = `./tracks/${track.filename}`; 
+                // AQUÍ ESTÁ LA SOLUCIÓN: encodeURIComponent maneja los espacios y el % correctamente
+                const path = `./tracks/${encodeURIComponent(track.filename)}`; 
                 setAudioUrl(path);
                 setFile({ name: track.title });
                 setSpeed(1.0);
@@ -492,9 +493,7 @@
                 const handleEnded = () => setIsPlaying(false);
                 const handleError = (e) => {
                     console.error("Audio error:", e);
-                    if (audioUrl && !audioUrl.startsWith('blob:')) {
-                            alert("Error: No se pudo cargar el audio desde la lista. Si estás ejecutando el archivo localmente (doble clic), los navegadores bloquean esto por seguridad. Sube los cambios a GitHub para que funcione.");
-                    }
+                    // Mensaje eliminado según petición del usuario
                 };
 
                 audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -1180,6 +1179,7 @@
                 return saved ? JSON.parse(saved) : [];
             });
             const [currentSong, setCurrentSong] = useState(null);
+            const dialog = useDialog();
             
             useEffect(() => {
                 localStorage.setItem('gwt_songs', JSON.stringify(songs));
@@ -1196,24 +1196,34 @@
 
             const deleteSong = (id, e) => {
                 e.stopPropagation();
-                if(confirm('¿Eliminar canción?')) {
-                    setSongs(songs.filter(s => s.id !== id));
-                }
+                dialog.confirm({
+                    title: "¿Eliminar canción?",
+                    message: "Esta canción se borrará de tu repertorio permanentemente.",
+                    onConfirm: () => setSongs(songs.filter(s => s.id !== id))
+                });
             };
 
             const SongEditor = ({ song = {}, onSave, onCancel }) => {
                 const [title, setTitle] = useState(song.title || '');
                 const [artist, setArtist] = useState(song.artist || '');
                 const [body, setBody] = useState(song.body || '');
+                const [key, setKey] = useState(song.key || '');
+                const [bpm, setBpm] = useState(song.bpm || '');
 
                 return (
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
                         <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
                         <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white font-bold" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
                         <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
+                        
+                        <div className="flex gap-3 mb-3">
+                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="Tono (Ej: G)" value={key} onChange={e => setKey(e.target.value)} />
+                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="BPM (Ej: 72)" type="number" value={bpm} onChange={e => setBpm(e.target.value)} />
+                        </div>
+
                         <textarea className="w-full mb-4 p-4 h-64 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 font-mono text-sm dark:text-white" placeholder="Letra y Acordes..." value={body} onChange={e => setBody(e.target.value)}></textarea>
                         <div className="flex gap-3">
-                            <button onClick={() => onSave({ ...song, title, artist, body })} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar</button>
+                            <button onClick={() => onSave({ ...song, title, artist, body, key, bpm })} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar</button>
                             <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold">Cancelar</button>
                         </div>
                     </div>
@@ -1229,6 +1239,12 @@
                         <div className="text-center">
                             <h2 className="text-2xl font-black dark:text-white">{currentSong.title}</h2>
                             <p className="text-cyan-600 font-bold">{currentSong.artist}</p>
+                            {(currentSong.key || currentSong.bpm) && (
+                                <div className="flex justify-center gap-3 mt-2">
+                                    {currentSong.key && <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500 font-bold">Key: {currentSong.key}</span>}
+                                    {currentSong.bpm && <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500 font-bold">BPM: {currentSong.bpm}</span>}
+                                </div>
+                            )}
                         </div>
                         <button onClick={() => setView('editor')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="edit" size={20}/></button>
                     </div>
@@ -1248,7 +1264,11 @@
                             <div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500 transition-colors group">
                                 <div>
                                     <h3 className="font-bold dark:text-white">{song.title}</h3>
-                                    <p className="text-xs text-slate-500">{song.artist}</p>
+                                    <div className="flex gap-2 items-center">
+                                        <p className="text-xs text-slate-500">{song.artist}</p>
+                                        {(song.key || song.bpm) && <span className="text-[10px] text-slate-400">•</span>}
+                                        {song.key && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 rounded text-slate-500 font-bold">{song.key}</span>}
+                                    </div>
                                 </div>
                                 <button onClick={(e) => deleteSong(song.id, e)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button>
                             </div>
@@ -1266,6 +1286,7 @@
             const mediaRecorderRef = useRef(null);
             const chunksRef = useRef([]);
             const timerRef = useRef(null);
+            const dialog = useDialog();
 
             useEffect(() => { loadRecordings(); }, []);
 
@@ -1320,10 +1341,14 @@
             };
 
             const deleteRec = async (id) => {
-                if(confirm("¿Borrar grabación?")) {
-                    await deleteRecordingFromDB(id);
-                    loadRecordings();
-                }
+                dialog.confirm({
+                    title: "¿Borrar idea?",
+                    message: "Esta grabación se eliminará permanentemente.",
+                    onConfirm: async () => {
+                        await deleteRecordingFromDB(id);
+                        loadRecordings();
+                    }
+                });
             };
 
             return (
@@ -1384,6 +1409,7 @@
             const mediaRecorderRef = useRef(null);
             const chunksRef = useRef([]);
             const sourceNodeRef = useRef(null);
+            const dialog = useDialog();
 
             const startRecording = async () => {
                 await resume();
@@ -1428,9 +1454,15 @@
             };
 
             const clearLoop = () => {
-                if (status === 'looping') stopLoop();
-                setAudioBuffer(null);
-                setStatus('idle');
+                dialog.confirm({
+                    title: "¿Borrar loop?",
+                    message: "La grabación actual se perderá y no podrás recuperarla.",
+                    onConfirm: () => {
+                        if (status === 'looping') stopLoop();
+                        setAudioBuffer(null);
+                        setStatus('idle');
+                    }
+                });
             };
 
             const handleMainAction = () => {
@@ -1515,6 +1547,160 @@
             );
         };
 
+        // --- GLOBAL PAD ENGINE HOOK ---
+        // Esto permite que el audio persista aunque se cambie de vista
+        const usePadEngine = () => {
+            const [activeKey, setActiveKey] = useState(null);
+            const [volume, setVolume] = useState(0.3);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const audioCtxRef = useRef(null);
+            const gainNodeRef = useRef(null);
+            const oscillatorsRef = useRef([]);
+            const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+            // Init Audio Context on Mount (Lazy)
+            const getCtx = () => {
+                if (!audioCtxRef.current) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    const ctx = new AudioContextClass();
+                    const masterGain = ctx.createGain();
+                    masterGain.connect(ctx.destination);
+                    masterGain.gain.value = 0;
+                    audioCtxRef.current = ctx;
+                    gainNodeRef.current = masterGain;
+                }
+                return audioCtxRef.current;
+            };
+
+            // Update Volume
+            useEffect(() => {
+                if (gainNodeRef.current) {
+                    gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
+                }
+            }, [volume, isPlaying]);
+
+            // Handle Pad Playback
+            useEffect(() => {
+                // If not playing, don't start new sounds, but do NOT stop context if we want smooth fade
+                if (!activeKey || !isPlaying) return;
+                
+                const ctx = getCtx();
+                
+                // Fade out old oscillators
+                oscillatorsRef.current.forEach(({ osc, gain }) => {
+                    try {
+                        gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); 
+                        setTimeout(() => { try{ osc.stop(); }catch(e){} }, 600);
+                    } catch(e){}
+                });
+                oscillatorsRef.current = [];
+
+                const rootIndex = KEYS.indexOf(activeKey);
+                const freqs = [
+                    130.81 * Math.pow(2, rootIndex / 12), // Root
+                    130.81 * Math.pow(2, (rootIndex + 7) / 12), // 5th
+                    261.63 * Math.pow(2, rootIndex / 12) // Octave
+                ];
+
+                freqs.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const oscGain = ctx.createGain();
+                    const filter = ctx.createBiquadFilter();
+
+                    osc.type = i === 2 ? 'sine' : 'sawtooth';
+                    osc.frequency.value = freq;
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 600;
+                    filter.Q.value = 1;
+
+                    osc.connect(filter);
+                    filter.connect(oscGain);
+                    oscGain.connect(gainNodeRef.current);
+
+                    oscGain.gain.setValueAtTime(0, ctx.currentTime);
+                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1); // Fade in
+
+                    osc.start();
+                    oscillatorsRef.current.push({ osc, gain: oscGain });
+                });
+
+            }, [activeKey, isPlaying]);
+
+            const togglePlay = async () => {
+                const ctx = getCtx();
+                if (ctx.state === 'suspended') await ctx.resume();
+                
+                const newState = !isPlaying;
+                setIsPlaying(newState);
+                
+                if (!newState) {
+                    // Stop sound if turning off
+                    oscillatorsRef.current.forEach(({ osc, gain }) => {
+                        gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
+                        setTimeout(() => { try{ osc.stop(); }catch(e){} }, 200);
+                    });
+                    oscillatorsRef.current = [];
+                }
+            };
+
+            const selectKey = (k) => {
+                setActiveKey(k);
+                if (!isPlaying) togglePlay(); 
+            };
+
+            return { activeKey, setActiveKey: selectKey, volume, setVolume, isPlaying, togglePlay, KEYS };
+        };
+
+        const PadPlayer = ({ engine }) => {
+            const { activeKey, setActiveKey, volume, setVolume, isPlaying, togglePlay, KEYS } = engine;
+
+            return (
+                <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 animate-fade-in">
+                    <div className="flex items-center gap-4 mb-8">
+                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full">
+                            <Icon name="layers" size={32} />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black dark:text-white">Worship Pads</h2>
+                            <p className="text-slate-500 text-sm">Sonido ambiental continuo</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-3 mb-8">
+                        {KEYS.map(k => (
+                            <button 
+                                key={k} 
+                                onClick={() => setActiveKey(k)} 
+                                className={`py-4 rounded-xl font-bold text-lg transition-all shadow-sm ${activeKey === k && isPlaying ? 'bg-indigo-600 text-white shadow-indigo-500/50 scale-105' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
+                            >
+                                {k}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl flex items-center gap-6">
+                        <button onClick={togglePlay} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 ${isPlaying ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                            <Icon name={isPlaying ? "pause" : "play"} size={28} fill="currentColor" />
+                        </button>
+                        <div className="flex-1">
+                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Volumen Master</label>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max="1" 
+                                step="0.01" 
+                                value={volume} 
+                                onChange={(e) => setVolume(parseFloat(e.target.value))} 
+                                className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600"
+                            />
+                        </div>
+                    </div>
+                    
+                    <p className="text-center text-xs text-slate-400 mt-6">Copyright © 2026 LUFTMANDMAURICIO</p>
+                </div>
+            );
+        };
+
         const Metronome = () => {
             const { resume, getContext } = useAudioContext();
             const [isPlaying, setIsPlaying] = useState(false);
@@ -1565,156 +1751,6 @@
                 <div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
         };
 
-        const PadPlayer = () => {
-            const [activeKey, setActiveKey] = useState(null);
-            const [volume, setVolume] = useState(0.3);
-            const [isPlaying, setIsPlaying] = useState(false);
-            const audioCtxRef = useRef(null);
-            const gainNodeRef = useRef(null);
-            const oscillatorsRef = useRef([]);
-            
-            const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
-            useEffect(() => {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                const ctx = new AudioContextClass();
-                const masterGain = ctx.createGain();
-                masterGain.connect(ctx.destination);
-                masterGain.gain.value = 0;
-                
-                audioCtxRef.current = ctx;
-                gainNodeRef.current = masterGain;
-
-                return () => ctx.close();
-            }, []);
-
-            useEffect(() => {
-                if (gainNodeRef.current) {
-                    gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
-                }
-            }, [volume, isPlaying]);
-
-            useEffect(() => {
-                if (!activeKey || !isPlaying) return;
-                playPad(activeKey);
-            }, [activeKey, isPlaying]);
-
-            const playPad = (key) => {
-                const ctx = audioCtxRef.current;
-                
-                // Stop old oscillators with fade out
-                oscillatorsRef.current.forEach(({ osc, gain }) => {
-                    gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); // Fade out
-                    setTimeout(() => osc.stop(), 600);
-                });
-                oscillatorsRef.current = [];
-
-                if (!key) return;
-
-                const rootIndex = KEYS.indexOf(key);
-                // Fundamental + 5th + Octave
-                const freqs = [
-                    130.81 * Math.pow(2, rootIndex / 12), // Root
-                    130.81 * Math.pow(2, (rootIndex + 7) / 12), // 5th
-                    261.63 * Math.pow(2, rootIndex / 12) // Octave
-                ];
-
-                freqs.forEach((freq, i) => {
-                    const osc = ctx.createOscillator();
-                    const oscGain = ctx.createGain();
-                    const filter = ctx.createBiquadFilter();
-
-                    osc.type = i === 2 ? 'sine' : 'sawtooth';
-                    osc.frequency.value = freq;
-                    
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 600;
-                    filter.Q.value = 1;
-
-                    osc.connect(filter);
-                    filter.connect(oscGain);
-                    oscGain.connect(gainNodeRef.current);
-
-                    oscGain.gain.setValueAtTime(0, ctx.currentTime);
-                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1); // Fade in
-
-                    osc.start();
-                    oscillatorsRef.current.push({ osc, gain: oscGain });
-                });
-            };
-
-            const togglePlay = async () => {
-                if (audioCtxRef.current.state === 'suspended') {
-                    await audioCtxRef.current.resume();
-                }
-                const newState = !isPlaying;
-                setIsPlaying(newState);
-                if (newState && activeKey) {
-                    playPad(activeKey);
-                } else {
-                    // Stop sound immediately if stopping
-                    oscillatorsRef.current.forEach(({ osc, gain }) => {
-                        gain.gain.setTargetAtTime(0, audioCtxRef.current.currentTime, 0.1);
-                        setTimeout(() => osc.stop(), 200);
-                    });
-                    oscillatorsRef.current = [];
-                }
-            };
-
-            const selectKey = (k) => {
-                setActiveKey(k);
-                if (!isPlaying) {
-                    togglePlay(); // Auto-start on key press
-                }
-            };
-
-            return (
-                <div className="max-w-2xl mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 animate-fade-in">
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full">
-                            <Icon name="layers" size={32} />
-                        </div>
-                        <div>
-                            <h2 className="text-3xl font-black dark:text-white">Worship Pads</h2>
-                            <p className="text-slate-500 text-sm">Sonido ambiental continuo</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-3 mb-8">
-                        {KEYS.map(k => (
-                            <button 
-                                key={k} 
-                                onClick={() => selectKey(k)} 
-                                className={`py-4 rounded-xl font-bold text-lg transition-all shadow-sm ${activeKey === k && isPlaying ? 'bg-indigo-600 text-white shadow-indigo-500/50 scale-105' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}
-                            >
-                                {k}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-2xl flex items-center gap-6">
-                        <button onClick={togglePlay} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 shrink-0 ${isPlaying ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                            <Icon name={isPlaying ? "pause" : "play"} size={28} fill="currentColor" />
-                        </button>
-                        <div className="flex-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">Volumen Master</label>
-                            <input 
-                                type="range" 
-                                min="0" 
-                                max="1" 
-                                step="0.01" 
-                                value={volume} 
-                                onChange={(e) => setVolume(parseFloat(e.target.value))} 
-                                className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-600"
-                            />
-                        </div>
-                    </div>
-                    
-                    <p className="text-center text-xs text-slate-400 mt-6">Copyright © 2026 LUFTMANDMAURICIO</p>
-                </div>
-            );
-        };
-
         const Footer = () => (<footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">Copyright © 2026 LUFTMANDMAURICIO</footer>);
 
         const App = () => {
@@ -1723,69 +1759,9 @@
             const [updateTrigger, setUpdateTrigger] = useState(0);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [showInstall, setShowInstall] = useState(false);
-            const [padKey, setPadKey] = useState('C');
-            const [isPadPlaying, setIsPadPlaying] = useState(false);
-            const { resume, getContext } = useAudioContext();
             
-            const padNodesRef = useRef([]);
-            const padGainRef = useRef(null);
-
-            useEffect(() => {
-                const ctx = getContext();
-                if(!ctx) return;
-                const masterGain = ctx.createGain();
-                masterGain.gain.value = 0.3; 
-                masterGain.connect(ctx.destination);
-                padGainRef.current = masterGain;
-                const handleVolume = (e) => { if(padGainRef.current) padGainRef.current.gain.setTargetAtTime(e.detail, ctx.currentTime, 0.1); };
-                window.addEventListener('gwt-pad-volume', handleVolume);
-                return () => window.removeEventListener('gwt-pad-volume', handleVolume);
-            }, []);
-
-            useEffect(() => {
-                const ctx = getContext();
-                if(!ctx) return;
-                
-                // Stop old nodes with extreme caution
-                padNodesRef.current.forEach(node => { 
-                    try { 
-                        if(node.gainNode) node.gainNode.gain.setTargetAtTime(0, ctx.currentTime, 1); 
-                        setTimeout(() => { try { node.osc.stop(); } catch(e){} }, 1100); 
-                    } catch(e) {} 
-                });
-                padNodesRef.current = [];
-
-                if (isPadPlaying && padGainRef.current) {
-                    resume();
-                    const rootIndex = NOTES.indexOf(padKey);
-                    const baseFreq = 130.81 * Math.pow(2, rootIndex / 12); 
-                    const freqs = [baseFreq, baseFreq * 1.5, baseFreq * 2];
-                    
-                    freqs.forEach((freq, i) => { 
-                        try {
-                            const osc = ctx.createOscillator(); 
-                            const gain = ctx.createGain(); 
-                            const filter = ctx.createBiquadFilter(); 
-                            osc.type = 'sawtooth'; 
-                            osc.frequency.value = freq + (Math.random() * 2 - 1); 
-                            filter.type = 'lowpass'; 
-                            filter.frequency.value = 600; 
-                            
-                            osc.connect(filter); 
-                            filter.connect(gain); 
-                            if(padGainRef.current) {
-                                gain.connect(padGainRef.current); 
-                                gain.gain.setValueAtTime(0, ctx.currentTime); 
-                                gain.gain.linearRampToValueAtTime(0.2 / (i+1), ctx.currentTime + 2); 
-                                osc.start(); 
-                                padNodesRef.current.push({ osc, gainNode: gain }); 
-                            }
-                        } catch(e) {
-                            console.error("Pad Error", e);
-                        }
-                    });
-                }
-            }, [isPadPlaying, padKey]);
+            // Inicializar motor de audio global para Pads
+            const padEngine = usePadEngine();
 
             useEffect(() => {
                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
@@ -1814,7 +1790,15 @@
                         <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 z-50 px-2 py-2 flex justify-between items-center safe-area-pb overflow-x-auto no-scrollbar"><NavItem id="home" icon="home" label="Inicio" /><NavItem id="tuner" icon="mic" label="Afinar" /><NavItem id="tracks" icon="music" label="Pistas" /><NavItem id="looper" icon="repeat" label="Loop" /><NavItem id="metronome" icon="activity" label="Tempo" />{showInstall && <NavItem id="install" icon="download" label="App" isAction={true} onClick={installApp} />}</nav>
                         <main className="max-w-5xl mx-auto p-6 md:p-12 animate-fade-in flex-grow w-full">
                             <div className="flex justify-end md:hidden mb-6"><button onClick={() => setDarkMode(!darkMode)} className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-slate-500"><Icon name={darkMode ? "sun" : "moon"} size={20} /></button></div>
-                            {isPadPlaying && view !== 'pads' && (<div onClick={() => setView('pads')} className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl z-[60] cursor-pointer animate-pulse-ring flex items-center justify-center"><Icon name="layers" size={24} /><span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{padKey}</span></div>)}
+                            
+                            {/* INDICADOR FLOTANTE CUANDO SUENAN LOS PADS Y NO ESTÁS EN LA VISTA PADS */}
+                            {padEngine.isPlaying && view !== 'pads' && (
+                                <div onClick={() => setView('pads')} className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl z-[60] cursor-pointer animate-pulse-ring flex items-center justify-center">
+                                    <Icon name="layers" size={24} />
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">{padEngine.activeKey}</span>
+                                </div>
+                            )}
+
                             {view === 'home' && (
                                 <div className="space-y-8 py-8">
                                     <div className="text-center space-y-4"><h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight">Guitar <span className="text-brand-600">Worship</span> Trainer</h1><p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-lg">Tu compañero de ensayo todo en uno.</p><div className="max-w-md mx-auto mt-6"><ProgressStats key={updateTrigger} /></div></div>
@@ -1833,7 +1817,7 @@
                             {view === 'ear' && <EarTrainer />}
                             {view === 'recorder' && <IdeaRecorder />}
                             {view === 'looper' && <JamLooper />}
-                            {view === 'pads' && <PadPlayer activeKey={padKey} setActiveKey={setPadKey} isPlaying={isPadPlaying} setIsPlaying={setIsPadPlaying} />}
+                            {view === 'pads' && <PadPlayer engine={padEngine} />}
                         </main>
                         <Footer />
                     </div>
