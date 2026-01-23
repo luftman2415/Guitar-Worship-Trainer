@@ -1,10 +1,11 @@
-const CACHE_NAME = 'gwt-pro-v21'; // Force update
+const CACHE_NAME = 'gwt-pro-v22'; // Updated to force clear cache
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './style.css'
 ];
 
 self.addEventListener('install', (e) => {

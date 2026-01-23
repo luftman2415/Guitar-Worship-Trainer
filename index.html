@@ -1280,6 +1280,7 @@
             const oscillatorsRef = useRef([]);
             const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
+            // Init Audio Context on Mount (Lazy)
             const getCtx = () => {
                 if (!audioCtxRef.current) {
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -1293,17 +1294,21 @@
                 return audioCtxRef.current;
             };
 
+            // Update Volume
             useEffect(() => {
-                if (gainNodeRef.current && audioCtxRef.current) {
+                if (gainNodeRef.current) {
                     gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
                 }
             }, [volume, isPlaying]);
 
+            // Handle Pad Playback
             useEffect(() => {
+                // If not playing, don't start new sounds, but do NOT stop context if we want smooth fade
                 if (!activeKey || !isPlaying) return;
                 
                 const ctx = getCtx();
                 
+                // Fade out old oscillators
                 oscillatorsRef.current.forEach(({ osc, gain }) => {
                     try {
                         gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); 
@@ -1314,9 +1319,9 @@
 
                 const rootIndex = KEYS.indexOf(activeKey);
                 const freqs = [
-                    130.81 * Math.pow(2, rootIndex / 12),
-                    130.81 * Math.pow(2, (rootIndex + 7) / 12),
-                    261.63 * Math.pow(2, rootIndex / 12)
+                    130.81 * Math.pow(2, rootIndex / 12), // Root
+                    130.81 * Math.pow(2, (rootIndex + 7) / 12), // 5th
+                    261.63 * Math.pow(2, rootIndex / 12) // Octave
                 ];
 
                 freqs.forEach((freq, i) => {
@@ -1335,7 +1340,7 @@
                     oscGain.connect(gainNodeRef.current);
 
                     oscGain.gain.setValueAtTime(0, ctx.currentTime);
-                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1);
+                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1); // Fade in
 
                     osc.start();
                     oscillatorsRef.current.push({ osc, gain: oscGain });
@@ -1351,6 +1356,7 @@
                 setIsPlaying(newState);
                 
                 if (!newState) {
+                    // Stop sound if turning off
                     oscillatorsRef.current.forEach(({ osc, gain }) => {
                         gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
                         setTimeout(() => { try{ osc.stop(); }catch(e){} }, 200);
