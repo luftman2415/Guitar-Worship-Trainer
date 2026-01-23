@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v25-FORCE-UPDATE'; 
+const CACHE_NAME = 'gwt-pro-v58-FIX-MISSING-COMPS'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -9,10 +9,10 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting(); 
 });
 
 self.addEventListener('activate', (e) => {
@@ -21,20 +21,17 @@ self.addEventListener('activate', (e) => {
       return Promise.all(keyList.map((key) => {
         if (key !== CACHE_NAME) return caches.delete(key);
       }));
-    })
+    }).then(() => self.clients.claim())
   );
-  return self.clients.claim(); 
 });
 
 self.addEventListener('fetch', (e) => {
-  // Estrategia Network First para HTML para ver cambios siempre
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request).catch(() => caches.match(e.request))
     );
     return;
   }
-
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       return cachedResponse || fetch(e.request);
