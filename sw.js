@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v58-FIX-MISSING-COMPS'; 
+const CACHE_NAME = 'gwt-pro-v59-UI-FIXES'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
