@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v22'; // Updated to force clear cache
+const CACHE_NAME = 'gwt-pro-v25-FORCE-UPDATE'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -27,22 +27,17 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (!e.request.url.startsWith('http')) return;
+  // Estrategia Network First para HTML para ver cambios siempre
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      
-      return fetch(e.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic' && networkResponse.type !== 'cors') {
-          return networkResponse;
-        }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, responseToCache);
-        });
-        return networkResponse;
-      }).catch(() => {});
+      return cachedResponse || fetch(e.request);
     })
   );
 });

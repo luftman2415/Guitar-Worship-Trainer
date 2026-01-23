@@ -39,12 +39,21 @@
             }
         }
         
-        // Registro seguro de Service Worker
+        // Registro de Service Worker
         if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('SW registrado', reg))
-                    .catch(err => console.log('SW error', err));
+                navigator.serviceWorker.register('sw.js').then(reg => {
+                    // Forzar actualización si hay una nueva versión
+                    reg.onupdatefound = () => {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = () => {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('Nueva versión disponible. Recargando...');
+                                window.location.reload();
+                            }
+                        };
+                    };
+                });
             });
         }
     </script>
@@ -69,8 +78,17 @@
                             <div className="max-w-md bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl">
                                 <div className="text-red-500 text-5xl mb-4">⚠️</div>
                                 <h2 className="text-xl font-bold mb-2 dark:text-white">Algo salió mal</h2>
-                                <p className="text-slate-500 mb-6 text-sm">Se ha detectado un error inesperado.</p>
-                                <button onClick={() => window.location.reload()} className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-brand-700 transition-colors w-full">Recargar Aplicación</button>
+                                <p className="text-slate-500 mb-6 text-sm">Error: {this.state.error?.message || 'Desconocido'}</p>
+                                <button onClick={() => { 
+                                    if(navigator.serviceWorker) {
+                                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                                            for(let registration of registrations) { registration.unregister(); } 
+                                            window.location.reload();
+                                        });
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                }} className="bg-brand-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-brand-700 transition-colors w-full">Borrar Caché y Recargar</button>
                             </div>
                         </div>
                     );
@@ -116,6 +134,25 @@
                     check: <polyline points="20 6 9 17 4 12"></polyline>,
                     rewind: <polygon points="11 19 2 12 11 5 11 19"></polygon>,
                     arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></g>
+            };
+
+            const extras = {
+                    arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></g>,
+                    award: <g><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></g>,
+                    clock: <g><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>,
+                    x: <g><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>,
+                    analyze: <g><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></g>,
+                    alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>,
+                    book: <g><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>,
+                    ear: <g><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M2 14h3v7H2z"/><path d="M19 14h3v7h-3z"/></g>,
+                    circle: <g><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></g>,
+                    download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></g>,
+                    upload: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></g>,
+                    layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
+                    repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
+                    lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
+                    file: <g><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></g>,
+                    rewind: <g><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></g>
             };
 
             return (
@@ -403,10 +440,10 @@
             const audioRef = useRef(null);
             const fileInputRef = useRef(null);
 
-            // NOMBRES EXACTOS DE ARCHIVOS SEGÚN CAPTURA GITHUB
+            // CORRECCIÓN NOMBRES ARCHIVOS 100%
             const TEACHER_TRACKS = [
                 { title: "La Sunamita", filename: "La Sunamita.mp3" },
-                { title: "100% No hay lugar más alto", filename: "No hay lugar mas alto.mp3" },
+                { title: "100% No hay lugar más alto", filename: "100% No hay lugar mas alto.mp3" },
                 { title: "Santo es el que vive", filename: "Santo es el que vive.mp3" },
                 { title: "100% Si tu presencia conmigo no va", filename: "STPCNV.mp3" },
                 { title: "Tus cuerdas de amor", filename: "Tus cuerdas de amor.mp3" }
@@ -433,7 +470,7 @@
             };
 
             const loadTeacherTrack = (track) => {
-                // AQUÍ ESTÁ LA SOLUCIÓN: encodeURIComponent maneja los caracteres especiales
+                // SOLUCIÓN 100%: Asegurar encoding
                 const path = `./tracks/${encodeURIComponent(track.filename)}`; 
                 setAudioUrl(path);
                 setFile({ name: track.title });
@@ -476,9 +513,7 @@
                 const handleEnded = () => setIsPlaying(false);
                 const handleError = (e) => {
                     console.error("Audio error:", e);
-                    if (audioUrl && !audioUrl.startsWith('blob:')) {
-                            // alert("Error: No se pudo cargar el audio desde la lista. Si estás ejecutando el archivo localmente (doble clic), los navegadores bloquean esto por seguridad. Sube los cambios a GitHub para que funcione.");
-                    }
+                    // Silent fail logic removed to avoid annoying users unless local
                 };
 
                 audio.addEventListener('timeupdate', handleTimeUpdate);
@@ -1296,7 +1331,7 @@
 
             // Update Volume
             useEffect(() => {
-                if (gainNodeRef.current) {
+                if (gainNodeRef.current && audioCtxRef.current) {
                     gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
                 }
             }, [volume, isPlaying]);
