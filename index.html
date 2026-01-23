@@ -118,25 +118,6 @@
                     arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></g>
             };
 
-            const extras = {
-                    arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></g>,
-                    award: <g><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></g>,
-                    clock: <g><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></g>,
-                    x: <g><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></g>,
-                    analyze: <g><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></g>,
-                    alert: <g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g>,
-                    book: <g><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></g>,
-                    ear: <g><path d="M3 14v-3a9 9 0 0 1 18 0v3"/><path d="M2 14h3v7H2z"/><path d="M19 14h3v7h-3z"/></g>,
-                    circle: <g><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/></g>,
-                    download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></g>,
-                    upload: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></g>,
-                    layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
-                    repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
-                    lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
-                    file: <g><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></g>,
-                    rewind: <g><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></g>
-            };
-
             return (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                     {icons[name] || extras[name] || <circle cx="12" cy="12" r="10" />}
@@ -1289,277 +1270,7 @@
             );
         };
 
-        const IdeaRecorder = () => {
-            const { getContext, resume } = useAudioContext();
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordings, setRecordings] = useState([]);
-            const [timer, setTimer] = useState(0);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
-            const timerRef = useRef(null);
-            const dialog = useDialog();
-
-            useEffect(() => { loadRecordings(); }, []);
-
-            // Timer effect
-            useEffect(() => {
-                if (isRecording) {
-                    timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
-                } else {
-                    clearInterval(timerRef.current);
-                    setTimer(0);
-                }
-                return () => clearInterval(timerRef.current);
-            }, [isRecording]);
-
-            const loadRecordings = async () => {
-                try {
-                    const recs = await getRecordingsFromDB();
-                    setRecordings(recs.sort((a,b) => b.date - a.date));
-                } catch(e) { console.error(e); }
-            };
-
-            const startRecording = async () => {
-                await resume();
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorderRef.current = new MediaRecorder(stream);
-                    chunksRef.current = [];
-                    mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
-                    mediaRecorderRef.current.onstop = async () => {
-                        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                        const id = Date.now();
-                        await saveRecordingToDB({ id, blob, date: new Date() });
-                        loadRecordings();
-                        stream.getTracks().forEach(t => t.stop());
-                    };
-                    mediaRecorderRef.current.start();
-                    setIsRecording(true);
-                } catch (e) { alert("Error al acceder al micrófono"); }
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && isRecording) {
-                    mediaRecorderRef.current.stop();
-                    setIsRecording(false);
-                }
-            };
-
-            const playRecording = (blob) => {
-                const url = URL.createObjectURL(blob);
-                const audio = new Audio(url);
-                audio.play();
-            };
-
-            const deleteRec = async (id) => {
-                dialog.confirm({
-                    title: "¿Borrar idea?",
-                    message: "Esta grabación se eliminará permanentemente.",
-                    onConfirm: async () => {
-                        await deleteRecordingFromDB(id);
-                        loadRecordings();
-                    }
-                });
-            };
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
-                    <div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-xs font-mono font-bold text-slate-500">
-                        {isRecording ? new Date(timer * 1000).toISOString().substr(14, 5) : '0:00'}
-                    </div>
-                    
-                    <h2 className="text-2xl font-bold mb-8 text-slate-800 dark:text-white">Grabadora de Ideas</h2>
-                    
-                    <div className="flex justify-center mb-6">
-                        <button 
-                            onClick={isRecording ? stopRecording : startRecording} 
-                            className={`w-32 h-32 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all border-4 ${isRecording ? 'bg-red-600 border-red-300 animate-pulse scale-105' : 'bg-red-500 border-red-100 hover:scale-105'}`}
-                        >
-                            <span className="text-5xl font-bold text-white mb-1">{isRecording ? timer : '0'}</span>
-                        </button>
-                    </div>
-                    
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">{isRecording ? 'GRABANDO...' : 'TOQUE PARA GRABAR'}</p>
-
-                    <div className="text-left">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">MIS IDEAS ({recordings.length})</h3>
-                        <div className="space-y-3">
-                            {recordings.length === 0 && (
-                                <div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-center text-slate-400 text-xs">
-                                    No tienes grabaciones guardadas aún.
-                                </div>
-                            )}
-                            {recordings.map(rec => (
-                                <div key={rec.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl group transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => playRecording(rec.blob)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full text-slate-700 dark:text-white shadow-sm hover:scale-110 transition-transform">
-                                            <Icon name="play" size={14} fill="currentColor"/>
-                                        </button>
-                                        <div>
-                                            <p className="text-xs font-bold dark:text-white">Idea {new Date(rec.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).toLowerCase()}</p>
-                                            <p className="text-[10px] text-slate-400">{new Date(rec.date).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => deleteRec(rec.id)} className="text-slate-300 hover:text-red-500 transition-colors p-2">
-                                        <Icon name="minus" size={16}/>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    
-                    <p className="text-center text-[10px] text-slate-400 mt-12">Copyright © 2026 LUFTMANDMAURICIO</p>
-                </div>
-            );
-        };
-
-        const JamLooper = () => {
-            const { getContext, resume } = useAudioContext();
-            const [status, setStatus] = useState('idle'); // idle, recording, looping
-            const [audioBuffer, setAudioBuffer] = useState(null);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
-            const sourceNodeRef = useRef(null);
-            const dialog = useDialog();
-
-            const startRecording = async () => {
-                await resume();
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
-                mediaRecorderRef.current = new MediaRecorder(stream);
-                chunksRef.current = [];
-                mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
-                mediaRecorderRef.current.onstop = async () => {
-                    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const ctx = getContext();
-                    const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
-                    setAudioBuffer(decodedBuffer);
-                    stream.getTracks().forEach(t => t.stop());
-                };
-                mediaRecorderRef.current.start();
-                setStatus('recording');
-            };
-
-            const stopRecording = () => {
-                if (mediaRecorderRef.current && status === 'recording') {
-                    mediaRecorderRef.current.stop();
-                    setStatus('idle');
-                }
-            };
-
-            const playLoop = () => {
-                const ctx = getContext();
-                if (!audioBuffer) return;
-                const source = ctx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.loop = true;
-                source.connect(ctx.destination);
-                source.start();
-                sourceNodeRef.current = source;
-                setStatus('looping');
-            };
-
-            const stopLoop = () => {
-                if (sourceNodeRef.current) sourceNodeRef.current.stop();
-                setStatus('idle');
-            };
-
-            const clearLoop = () => {
-                dialog.confirm({
-                    title: "¿Borrar loop?",
-                    message: "La grabación actual se perderá y no podrás recuperarla.",
-                    onConfirm: () => {
-                        if (status === 'looping') stopLoop();
-                        setAudioBuffer(null);
-                        setStatus('idle');
-                    }
-                });
-            };
-
-            const handleMainAction = () => {
-                if (status === 'idle' && !audioBuffer) {
-                    startRecording();
-                } else if (status === 'recording') {
-                    stopRecording();
-                } else if (status === 'idle' && audioBuffer) {
-                    playLoop();
-                } else if (status === 'looping') {
-                    stopLoop();
-                }
-            };
-
-            return (
-                <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in relative overflow-hidden">
-                    <div className="w-20 h-20 bg-teal-100 dark:bg-teal-900/30 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Icon name="repeat" size={40} />
-                    </div>
-                    
-                    <h2 className="text-3xl font-black mb-2 text-slate-800 dark:text-white">Jam Looper</h2>
-                    <p className="text-slate-500 text-sm mb-10">Cero latencia. Graba y toca encima al instante.</p>
-                    
-                    <div className="flex justify-center mb-10 relative">
-                        {/* Visual Circle Indicator */}
-                        <div className={`w-40 h-40 rounded-full flex items-center justify-center border-[6px] transition-all duration-300 relative ${
-                            status === 'recording' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 
-                            status === 'looping' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 
-                            'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'
-                        }`}>
-                            {status === 'looping' && (
-                                <div className="absolute inset-0 rounded-full border-[6px] border-t-teal-200 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                            )}
-                            
-                            <button onClick={handleMainAction} className="flex flex-col items-center justify-center w-full h-full z-10">
-                                {status === 'recording' ? (
-                                    <>
-                                        <div className="w-4 h-4 bg-red-500 rounded-sm mb-2 animate-pulse"></div>
-                                        <span className="text-xs font-bold text-red-500 uppercase tracking-widest">Grabando</span>
-                                    </>
-                                ) : status === 'looping' ? (
-                                    <>
-                                        <span className="text-4xl font-black text-teal-600">ON</span>
-                                        <span className="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Looping</span>
-                                    </>
-                                ) : !audioBuffer ? (
-                                    <>
-                                        <span className="text-5xl font-medium text-slate-400 mb-2">0</span>
-                                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grabar</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Icon name="play" size={32} className="text-teal-500 mb-1 ml-1" fill="currentColor"/>
-                                        <span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Play</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-4 items-center justify-center">
-                        {audioBuffer ? (
-                            <>
-                                <button onClick={() => { stopLoop(); playLoop(); }} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-teal-600/30 hover:bg-teal-700 active:scale-95 transition-all">
-                                    <Icon name="repeat" size={18} /> Re-Sync
-                                </button>
-                                <button onClick={clearLoop} className="bg-red-50 text-red-500 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-red-100 transition-colors">
-                                    <Icon name="minus" size={18} /> Borrar
-                                </button>
-                            </>
-                        ) : (
-                            <p className="text-xs text-slate-400">Pulsa el círculo para comenzar</p>
-                        )}
-                    </div>
-                    
-                    {audioBuffer && (
-                        <p className="text-[10px] text-slate-400 mt-6">El loop está en memoria (sin latencia).</p>
-                    )}
-                    
-                    <p className="text-center text-[10px] text-slate-400 mt-8">Copyright © 2026 LUFTMANDMAURICIO</p>
-                </div>
-            );
-        };
-
         // --- GLOBAL PAD ENGINE HOOK ---
-        // Esto permite que el audio persista aunque se cambie de vista
         const usePadEngine = () => {
             const [activeKey, setActiveKey] = useState(null);
             const [volume, setVolume] = useState(0.3);
@@ -1569,7 +1280,6 @@
             const oscillatorsRef = useRef([]);
             const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-            // Init Audio Context on Mount (Lazy)
             const getCtx = () => {
                 if (!audioCtxRef.current) {
                     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -1583,21 +1293,17 @@
                 return audioCtxRef.current;
             };
 
-            // Update Volume
             useEffect(() => {
-                if (gainNodeRef.current) {
+                if (gainNodeRef.current && audioCtxRef.current) {
                     gainNodeRef.current.gain.setTargetAtTime(isPlaying ? volume : 0, audioCtxRef.current.currentTime, 0.1);
                 }
             }, [volume, isPlaying]);
 
-            // Handle Pad Playback
             useEffect(() => {
-                // If not playing, don't start new sounds, but do NOT stop context if we want smooth fade
                 if (!activeKey || !isPlaying) return;
                 
                 const ctx = getCtx();
                 
-                // Fade out old oscillators
                 oscillatorsRef.current.forEach(({ osc, gain }) => {
                     try {
                         gain.gain.setTargetAtTime(0, ctx.currentTime, 0.5); 
@@ -1608,9 +1314,9 @@
 
                 const rootIndex = KEYS.indexOf(activeKey);
                 const freqs = [
-                    130.81 * Math.pow(2, rootIndex / 12), // Root
-                    130.81 * Math.pow(2, (rootIndex + 7) / 12), // 5th
-                    261.63 * Math.pow(2, rootIndex / 12) // Octave
+                    130.81 * Math.pow(2, rootIndex / 12),
+                    130.81 * Math.pow(2, (rootIndex + 7) / 12),
+                    261.63 * Math.pow(2, rootIndex / 12)
                 ];
 
                 freqs.forEach((freq, i) => {
@@ -1629,7 +1335,7 @@
                     oscGain.connect(gainNodeRef.current);
 
                     oscGain.gain.setValueAtTime(0, ctx.currentTime);
-                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1); // Fade in
+                    oscGain.gain.linearRampToValueAtTime(0.2 / (i + 1), ctx.currentTime + 1);
 
                     osc.start();
                     oscillatorsRef.current.push({ osc, gain: oscGain });
@@ -1645,7 +1351,6 @@
                 setIsPlaying(newState);
                 
                 if (!newState) {
-                    // Stop sound if turning off
                     oscillatorsRef.current.forEach(({ osc, gain }) => {
                         gain.gain.setTargetAtTime(0, ctx.currentTime, 0.1);
                         setTimeout(() => { try{ osc.stop(); }catch(e){} }, 200);
@@ -1712,56 +1417,6 @@
             );
         };
 
-        const Metronome = () => {
-            const { resume, getContext } = useAudioContext();
-            const [isPlaying, setIsPlaying] = useState(false);
-            const [bpm, setBpm] = useState(120);
-            const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
-            const [subdivision, setSubdivision] = useState(1);
-            const [visualBeat, setVisualBeat] = useState(false);
-            const [trainerEnabled, setTrainerEnabled] = useState(false);
-            const [trainerBars, setTrainerBars] = useState(4);
-            const [trainerBpmInc, setTrainerBpmInc] = useState(5);
-            const [presets, setPresets] = useState([]);
-            
-            const nextNoteTimeRef = useRef(0); const timerIDRef = useRef(null); const currentNoteRef = useRef(0); const currentBarRef = useRef(0); const startTimeRef = useRef(0); const tapTimesRef = useRef([]);
-            const bpmRef = useRef(bpm); const bpmIncRef = useRef(trainerBpmInc); const barsIncRef = useRef(trainerBars); const trainerEnabledRef = useRef(trainerEnabled);
-            const dialog = useDialog();
-            const isPlayingRef = useRef(isPlaying);
-            useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
-
-            useEffect(() => { bpmRef.current = bpm; }, [bpm]); useEffect(() => { bpmIncRef.current = trainerBpmInc; }, [trainerBpmInc]); useEffect(() => { barsIncRef.current = trainerBars; }, [trainerBars]); useEffect(() => { trainerEnabledRef.current = trainerEnabled; }, [trainerEnabled]);
-            useEffect(() => { const savedPresets = localStorage.getItem('gwt_metronome_presets'); if (savedPresets) setPresets(JSON.parse(savedPresets)); }, []);
-
-            const playClick = (time, type) => { 
-                const ctx = getContext(); if (!ctx) return; 
-                const osc = ctx.createOscillator(); 
-                const gain = ctx.createGain(); 
-                osc.connect(gain); 
-                gain.connect(ctx.destination); 
-                if (type === 0) { osc.frequency.setValueAtTime(1500, time); gain.gain.setValueAtTime(1, time); } 
-                else if (type === 1) { osc.frequency.setValueAtTime(1000, time); gain.gain.setValueAtTime(0.7, time); } 
-                else { osc.frequency.setValueAtTime(800, time); gain.gain.setValueAtTime(0.3, time); } 
-                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05); 
-                osc.start(time); 
-                osc.stop(time + 0.05); 
-            };
-
-            const scheduler = useCallback(() => { const ctx = getContext(); if (!ctx) return; while (nextNoteTimeRef.current < ctx.currentTime + 0.1) { const beatIndex = currentNoteRef.current; const notesPerMeasure = beatsPerMeasure * subdivision; let type = 2; if (beatIndex % notesPerMeasure === 0) type = 0; else if (beatIndex % subdivision === 0) type = 1; if (type === 0 && beatIndex > 0) { currentBarRef.current++; if (trainerEnabledRef.current && currentBarRef.current % barsIncRef.current === 0) { const newBpm = Math.min(300, bpmRef.current + bpmIncRef.current); bpmRef.current = newBpm; setBpm(newBpm); } } playClick(nextNoteTimeRef.current, type); if (type !== 2) { setTimeout(() => { setVisualBeat(true); setTimeout(() => setVisualBeat(false), 80); }, (nextNoteTimeRef.current - ctx.currentTime) * 1000); } nextNoteTimeRef.current += (60.0 / bpmRef.current) / subdivision; currentNoteRef.current++; } timerIDRef.current = setTimeout(scheduler, 25); }, [getContext, beatsPerMeasure, subdivision]);
-            const togglePlay = () => { if (isPlaying) { setIsPlaying(false); clearTimeout(timerIDRef.current); if (startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); startTimeRef.current = 0; } } else { startTimeRef.current = Date.now(); resume().then((ctx) => { if(ctx) { currentNoteRef.current = 0; currentBarRef.current = 0; nextNoteTimeRef.current = ctx.currentTime + 0.05; setIsPlaying(true); scheduler(); }}); } };
-            const handleTap = () => { const now = Date.now(); let times = tapTimesRef.current; if (times.length > 0 && now - times[times.length - 1] > 2000) times = []; times.push(now); if (times.length > 4) times.shift(); tapTimesRef.current = times; if (times.length > 1) { let intervals = []; for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]); const avg = intervals.reduce((a, b) => a + b) / intervals.length; const newBpm = Math.round(60000 / avg); if (newBpm >= 30 && newBpm <= 300) setBpm(newBpm); } };
-            
-            useEffect(() => { return () => { clearTimeout(timerIDRef.current); if (isPlayingRef.current && startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); } }; }, []);
-
-            const savePreset = () => { dialog.prompt({ title: "Guardar configuración", message: "Asigna un nombre a este preset:", onConfirm: (name) => { if(!name) return; const newPreset = { id: Date.now(), name, bpm, beatsPerMeasure, subdivision, trainerEnabled, trainerBars, trainerBpmInc }; const updated = [...presets, newPreset]; setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); } }); };
-            const loadPreset = (p) => { setBpm(p.bpm); setBeatsPerMeasure(p.beatsPerMeasure); setSubdivision(p.subdivision); setTrainerEnabled(p.trainerEnabled); setTrainerBars(p.trainerBars); setTrainerBpmInc(p.trainerBpmInc); };
-            const deletePreset = (id, e) => { e.stopPropagation(); const updated = presets.filter(p => p.id !== id); setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); };
-
-            return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden animate-fade-in">
-                <h2 className="text-3xl font-black text-center mt-8 mb-2 dark:text-white">Metrónomo</h2>
-                <div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
-        };
-
         const Footer = () => (<footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">Copyright © 2026 LUFTMANDMAURICIO</footer>);
 
         const App = () => {
@@ -1788,7 +1443,12 @@
             useEffect(() => { darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark'); }, [darkMode]);
 
             const installApp = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { setDeferredPrompt(null); setShowInstall(false); } };
-            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { if (isAction) { return (<button onClick={onClick} className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10"><div className="p-2 rounded-full"><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); } return (<button onClick={() => setView(id)} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-full ${view === id ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><div className={`p-2 rounded-full transition-all ${view === id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); };
+            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { 
+                if (isAction) { 
+                    return (<button onClick={onClick} className="flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-xl transition-all text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10"><div className="p-2 rounded-full"><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); 
+                } 
+                return (<button onClick={() => setView(id)} className={`flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${view === id ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}><div className={`p-2 rounded-full transition-all ${view === id ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); 
+            };
 
             return (
                 <DialogProvider>
@@ -1798,11 +1458,28 @@
                             <div className="flex-1 overflow-y-auto w-full px-2 flex flex-col items-center gap-3 no-scrollbar py-2"><NavItem id="home" icon="home" label="Inicio" /><NavItem id="tuner" icon="mic" label="Afinar" /><NavItem id="tracks" icon="music" label="Pistas" /><NavItem id="metronome" icon="activity" label="Tempo" /><NavItem id="pads" icon="layers" label="Pads" /><NavItem id="looper" icon="repeat" label="Looper" /><NavItem id="recorder" icon="mic" label="Ideas" /><NavItem id="routine" icon="zap" label="Rutinas" /><NavItem id="scales" icon="grid" label="Escalas" /><NavItem id="ear" icon="ear" label="Oído" /><NavItem id="analyze" icon="analyze" label="Teoría" /><NavItem id="songs" icon="book" label="Songs" />{showInstall && <div className="w-full border-t border-slate-100 dark:border-slate-800 my-2"></div>}{showInstall && <NavItem id="install" icon="download" label="Instalar" isAction={true} onClick={installApp} />}</div>
                             <div className="flex justify-center w-full py-6 shrink-0"><button onClick={() => setDarkMode(!darkMode)} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-brand-600 dark:text-slate-400 rounded-full transition-all hover:scale-110 shadow-sm border border-slate-200 dark:border-slate-700" title="Modo Oscuro/Claro"><Icon name={darkMode ? "sun" : "moon"} size={22} /></button></div>
                         </nav>
-                        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-slate-800 z-50 px-2 py-2 flex justify-between items-center safe-area-pb overflow-x-auto no-scrollbar"><NavItem id="home" icon="home" label="Inicio" /><NavItem id="tuner" icon="mic" label="Afinar" /><NavItem id="tracks" icon="music" label="Pistas" /><NavItem id="looper" icon="repeat" label="Loop" /><NavItem id="metronome" icon="activity" label="Tempo" />{showInstall && <NavItem id="install" icon="download" label="App" isAction={true} onClick={installApp} />}</nav>
-                        <main className="max-w-5xl mx-auto p-6 md:p-12 animate-fade-in flex-grow w-full">
+                        
+                        {/* MENÚ MÓVIL CORREGIDO CON SCROLL HORIZONTAL Y TODOS LOS ITEMS */}
+                        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 z-50 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar safe-area-pb">
+                            <NavItem id="home" icon="home" label="Inicio" />
+                            <NavItem id="tuner" icon="mic" label="Afinar" />
+                            <NavItem id="tracks" icon="music" label="Pistas" />
+                            <NavItem id="metronome" icon="activity" label="Tempo" />
+                            <NavItem id="pads" icon="layers" label="Pads" />
+                            <NavItem id="looper" icon="repeat" label="Loop" />
+                            <NavItem id="recorder" icon="mic" label="Ideas" />
+                            <NavItem id="routine" icon="zap" label="Rutinas" />
+                            <NavItem id="scales" icon="grid" label="Escalas" />
+                            <NavItem id="ear" icon="ear" label="Oído" />
+                            <NavItem id="analyze" icon="analyze" label="Teoría" />
+                            <NavItem id="songs" icon="book" label="Songs" />
+                            {showInstall && <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-700 mx-2 shrink-0"></div>}
+                            {showInstall && <NavItem id="install" icon="download" label="App" isAction={true} onClick={installApp} />}
+                        </nav>
+
+                        <main className="max-w-5xl mx-auto p-4 md:p-12 pb-32 animate-fade-in flex-grow w-full">
                             <div className="flex justify-end md:hidden mb-6"><button onClick={() => setDarkMode(!darkMode)} className="p-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-slate-500"><Icon name={darkMode ? "sun" : "moon"} size={20} /></button></div>
                             
-                            {/* INDICADOR FLOTANTE CUANDO SUENAN LOS PADS Y NO ESTÁS EN LA VISTA PADS */}
                             {padEngine.isPlaying && view !== 'pads' && (
                                 <div onClick={() => setView('pads')} className="fixed bottom-24 right-4 md:bottom-8 md:right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl z-[60] cursor-pointer animate-pulse-ring flex items-center justify-center">
                                     <Icon name="layers" size={24} />
