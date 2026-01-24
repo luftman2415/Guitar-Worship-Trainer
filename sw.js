@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v60-AUDIO-FIX'; 
+const CACHE_NAME = 'gwt-pro-v61-FILENAME-FIX'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
