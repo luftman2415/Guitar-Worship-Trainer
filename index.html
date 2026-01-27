@@ -128,7 +128,7 @@
                 layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
                 repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
                 lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
-                file: <g><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></g>,
+                file: <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>,
                 check: <polyline points="20 6 9 17 4 12"></polyline>,
                 rewind: <polygon points="11 19 2 12 11 5 11 19"></polygon>,
                 arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></g>
@@ -825,7 +825,7 @@
                         <div className={`w-40 h-40 rounded-full flex items-center justify-center border-[6px] transition-all duration-300 relative ${status === 'recording' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : status === 'looping' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'}`}>
                             {status === 'looping' && (<div className="absolute inset-0 rounded-full border-[6px] border-t-teal-200 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>)}
                             <button onClick={handleMainAction} className="flex flex-col items-center justify-center w-full h-full z-10">
-                                {status === 'recording' ? (<><div className="w-4 h-4 bg-red-500 rounded-sm mb-2 animate-pulse"></div><span className="text-xs font-bold text-red-500 uppercase tracking-widest">Grabando</span></>) : status === 'looping' ? (<><span className="text-4xl font-black text-teal-600">ON</span><span className="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Looping</span></>) : !audioBuffer ? (<><span className="text-5xl font-medium text-slate-400 mb-2">0</span><span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grabar</span></>) : (<><Icon name="play" size={32} className="text-teal-500 mb-1 ml-1" fill="currentColor"/><span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Play</span></>)}
+                                {status === 'recording' ? (<><div className="w-4 h-4 bg-red-500 rounded-sm mb-2 animate-pulse"></div><span className="text-xs font-bold text-red-500 uppercase tracking-widest">Grabando</span></>) : status === 'looping' ? (<><span className="text-4xl font-black text-teal-600">ON</span><span className="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Looping</span></>) : !audioBuffer ? (<><span className="text-5xl font-medium text-slate-400 mb-2">0</span><span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grabar</span></>) : !sourceNodeRef.current ? (<><Icon name="play" size={32} className="text-teal-500 mb-1 ml-1" fill="currentColor"/><span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Play</span></>) : (<><Icon name="stop" size={32} className="text-teal-500 mb-1" fill="currentColor"/><span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Stop</span></>)}
                             </button>
                         </div>
                     </div>
@@ -972,12 +972,14 @@
         const EarTrainer = () => {
             const { resume, getContext } = useAudioContext();
             const [gameState, setGameState] = useState('menu'); 
+            const [trainerType, setTrainerType] = useState('interval'); // 'interval' or 'chord'
             const [level, setLevel] = useState(1);
             const [questionCount, setQuestionCount] = useState(0); 
             const [isPlaying, setIsPlaying] = useState(false);
-            const [currentInterval, setCurrentInterval] = useState(null);
+            const [currentTarget, setCurrentTarget] = useState(null); // Contains interval or chord data
             const [lastError, setLastError] = useState(null); 
             
+            // --- INTERVALS DATA ---
             const ALL_INTERVALS = [
                 { id: 'P1', name: "Unísono", semitones: 0 },
                 { id: 'm2', name: "2da Menor", semitones: 1 },
@@ -994,25 +996,24 @@
                 { id: 'P8', name: "8va Justa", semitones: 12 }
             ];
 
-            const LEVELS = {
-                1: { 
-                    name: "Nivel 1: Mayores y Justos", 
-                    desc: "Intervalos básicos y consonantes. Dirección ascendente.",
-                    types: ['P1', 'M2', 'M3', 'P4', 'P5', 'M6', 'M7', 'P8'],
-                    direction: 'asc'
-                },
-                2: { 
-                    name: "Nivel 2: Menores y Tritono", 
-                    desc: "Intervalos más oscuros y disonantes. Dirección ascendente.",
-                    types: ['m2', 'm3', 'TT', 'm6', 'm7'],
-                    direction: 'asc'
-                },
-                3: { 
-                    name: "Nivel 3: Maestro (Mix)", 
-                    desc: "Todos los intervalos. Dirección aleatoria (Ascendente/Descendente).",
-                    types: ['All'],
-                    direction: 'random'
-                }
+            const INTERVAL_LEVELS = {
+                1: { name: "Nivel 1: Mayores y Justos", types: ['P1', 'M2', 'M3', 'P4', 'P5', 'M6', 'M7', 'P8'], direction: 'asc' },
+                2: { name: "Nivel 2: Menores y Tritono", types: ['m2', 'm3', 'TT', 'm6', 'm7'], direction: 'asc' },
+                3: { name: "Nivel 3: Maestro (Mix)", types: ['All'], direction: 'random' }
+            };
+
+            // --- CHORDS DATA ---
+            const ALL_CHORDS = [
+                { id: 'M', name: 'Mayor', offsets: [0, 4, 7] },
+                { id: 'm', name: 'Menor', offsets: [0, 3, 7] },
+                { id: 'dim', name: 'Disminuido', offsets: [0, 3, 6] },
+                { id: 'aug', name: 'Aumentado', offsets: [0, 4, 8] }
+            ];
+
+            const CHORD_LEVELS = {
+                1: { name: "Nivel 1A: Mayor vs Menor", types: ['M', 'm'] },
+                2: { name: "Nivel 1B: + Disminuidos", types: ['M', 'm', 'dim'] },
+                3: { name: "Nivel 1C: + Aumentados", types: ['M', 'm', 'dim', 'aug'] }
             };
 
             const QUESTIONS_PER_LEVEL = 10;
@@ -1027,29 +1028,35 @@
             };
 
             const generateQuestion = (currentLvl) => {
-                const config = LEVELS[currentLvl];
-                let possibleIds = config.types;
-                if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id);
+                let pool = [];
+                let config = null;
+                const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); // Lower range for chords
 
-                const pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id));
-                const target = pool[Math.floor(Math.random() * pool.length)];
-                const rootFreq = 261.63 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
-                let dir = config.direction;
-                if (dir === 'random') {
-                    dir = Math.random() < 0.5 ? 'asc' : 'desc';
+                if (trainerType === 'interval') {
+                    config = INTERVAL_LEVELS[currentLvl];
+                    let possibleIds = config.types;
+                    if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id);
+                    pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id));
+                    const target = pool[Math.floor(Math.random() * pool.length)];
+                    let dir = config.direction;
+                    if (dir === 'random') dir = Math.random() < 0.5 ? 'asc' : 'desc';
+                    setCurrentTarget({ ...target, rootFreq, direction: dir });
+                    // FIX: Force playback on next question
+                    setTimeout(() => playInterval(rootFreq, target.semitones, dir, true), 400);
+                } else {
+                    // CHORDS
+                    config = CHORD_LEVELS[currentLvl];
+                    pool = ALL_CHORDS.filter(c => config.types.includes(c.id));
+                    const target = pool[Math.floor(Math.random() * pool.length)];
+                    setCurrentTarget({ ...target, rootFreq });
+                    // FIX: Force playback on next question
+                    setTimeout(() => playChord(rootFreq, target.offsets, true), 400);
                 }
-                
-                setCurrentInterval({
-                    ...target,
-                    rootFreq,
-                    direction: dir
-                });
-
-                setTimeout(() => playInterval(rootFreq, target.semitones, dir), 400);
             };
 
-            const playInterval = async (rootFreq, semitones, direction) => {
-                if (isPlaying) return;
+            // Synth for Intervals (Melodic)
+            const playInterval = async (rootFreq, semitones, direction, override = false) => {
+                if (isPlaying && !override) return;
                 setIsPlaying(true);
                 const ctx = getContext();
                 if (!ctx) return;
@@ -1082,10 +1089,51 @@
                 setTimeout(() => setIsPlaying(false), 1600);
             };
 
-            const handleAnswer = (selectedId) => {
-                if (!currentInterval) return;
+            // Synth for Chords (Harmonic/Piano-like)
+            const playChord = async (rootFreq, offsets, override = false) => {
+                if (isPlaying && !override) return;
+                setIsPlaying(true);
+                const ctx = getContext();
+                if (!ctx) return;
 
-                if (selectedId === currentInterval.id) {
+                const now = ctx.currentTime;
+                
+                offsets.forEach((semitone, i) => {
+                    const freq = rootFreq * Math.pow(2, semitone / 12);
+                    
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    const filter = ctx.createBiquadFilter();
+
+                    // Simulating Electric Piano
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(3000, now);
+                    filter.frequency.exponentialRampToValueAtTime(500, now + 1.5); // Filter envelope
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    // Volume Envelope: Percussive attack, long decay
+                    const stagger = i * 0.03; // Strum effect (30ms)
+                    gain.gain.setValueAtTime(0, now + stagger);
+                    gain.gain.linearRampToValueAtTime(0.25, now + stagger + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + stagger + 2.0);
+
+                    osc.start(now + stagger);
+                    osc.stop(now + stagger + 2.1);
+                });
+
+                setTimeout(() => setIsPlaying(false), 2000);
+            };
+
+            const handleAnswer = (selectedId) => {
+                if (!currentTarget) return;
+
+                if (selectedId === currentTarget.id) {
                     const nextCount = questionCount + 1;
                     setQuestionCount(nextCount);
                     if (nextCount >= QUESTIONS_PER_LEVEL) {
@@ -1094,7 +1142,7 @@
                         generateQuestion(level);
                     }
                 } else {
-                    setLastError(currentInterval);
+                    setLastError(currentTarget);
                     setGameState('level_failed');
                 }
             };
@@ -1103,15 +1151,24 @@
                 <div className="max-w-lg mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
                     <div className="p-4 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-full mb-6 text-fuchsia-600 inline-block"><Icon name="ear" size={48} /></div>
                     <h2 className="text-3xl font-bold mb-2 dark:text-white">Entrenador Auditivo</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-8">Perfecciona tu oído. Debes acertar 10/10 para avanzar.</p>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6">Perfecciona tu oído. Acierta 10/10.</p>
+                    
+                    <div className="flex justify-center gap-2 mb-8 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
+                        <button onClick={() => setTrainerType('interval')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${trainerType === 'interval' ? 'bg-white dark:bg-slate-600 shadow text-fuchsia-600' : 'text-slate-400'}`}>Intervalos</button>
+                        <button onClick={() => setTrainerType('chord')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${trainerType === 'chord' ? 'bg-white dark:bg-slate-600 shadow text-fuchsia-600' : 'text-slate-400'}`}>Acordes</button>
+                    </div>
+
                     <div className="space-y-4">
-                        {[1, 2, 3].map(lvl => (
-                            <button key={lvl} onClick={() => startLevel(lvl)} className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name="play" size={60} className="text-fuchsia-500" /></div>
-                                <h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{LEVELS[lvl].name}</h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pr-8">{LEVELS[lvl].desc}</p>
-                            </button>
-                        ))}
+                        {(trainerType === 'interval' ? [1, 2, 3] : [1, 2, 3]).map(lvl => {
+                            const config = trainerType === 'interval' ? INTERVAL_LEVELS[lvl] : CHORD_LEVELS[lvl];
+                            return (
+                                <button key={lvl} onClick={() => startLevel(lvl)} className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name="play" size={60} className="text-fuchsia-500" /></div>
+                                    <h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{config.name}</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{trainerType === 'interval' ? config.types.join(', ').substring(0, 30) + '...' : config.types.map(t => ALL_CHORDS.find(c=>c.id===t).name).join(', ')}</p>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             );
@@ -1120,7 +1177,7 @@
                 <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal">
                     <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="x" size={40} /></div>
                     <h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Fallado!</h2>
-                    <p className="text-slate-500 mb-6">El intervalo correcto era: <span className="font-bold text-slate-800 dark:text-white">{lastError?.name}</span>.</p>
+                    <p className="text-slate-500 mb-6">La respuesta correcta era: <span className="font-bold text-slate-800 dark:text-white">{lastError?.name}</span>.</p>
                     <button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl hover:opacity-90">Volver al Menú</button>
                 </div>
             );
@@ -1137,23 +1194,28 @@
                 </div>
             );
 
-            if (!currentInterval) return null;
+            if (!currentTarget) return null;
 
             let currentOptions = [];
-            const config = LEVELS[level];
-            if (config.types[0] === 'All') currentOptions = ALL_INTERVALS;
-            else currentOptions = ALL_INTERVALS.filter(i => config.types.includes(i.id));
+            if (trainerType === 'interval') {
+                const config = INTERVAL_LEVELS[level];
+                if (config.types[0] === 'All') currentOptions = ALL_INTERVALS;
+                else currentOptions = ALL_INTERVALS.filter(i => config.types.includes(i.id));
+            } else {
+                const config = CHORD_LEVELS[level];
+                currentOptions = ALL_CHORDS.filter(c => config.types.includes(c.id));
+            }
 
             return (
                 <div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in">
                     <div className="flex justify-between items-center mb-6">
                         <button onClick={() => setGameState('menu')} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={20}/></button>
-                        <div className="flex flex-col items-center"><span className="text-xs font-bold text-fuchsia-500 uppercase tracking-widest">{LEVELS[level].name.split(':')[0]}</span><div className="text-sm font-bold dark:text-white">Progreso: {questionCount} / {QUESTIONS_PER_LEVEL}</div></div>
+                        <div className="flex flex-col items-center"><span className="text-xs font-bold text-fuchsia-500 uppercase tracking-widest">{trainerType === 'interval' ? INTERVAL_LEVELS[level].name.split(':')[0] : CHORD_LEVELS[level].name.split(':')[0]}</span><div className="text-sm font-bold dark:text-white">Progreso: {questionCount} / {QUESTIONS_PER_LEVEL}</div></div>
                         <div className="w-5"></div>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden"><div className="bg-fuchsia-500 h-full transition-all duration-300" style={{ width: `${(questionCount / QUESTIONS_PER_LEVEL) * 100}%` }}></div></div>
-                    <button onClick={() => playInterval(currentInterval.rootFreq, currentInterval.semitones, currentInterval.direction)} className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}><Icon name="ear" size={48} fill="currentColor" /></button>
-                    <p className="text-slate-400 text-xs mb-6">Toca para escuchar de nuevo</p>
+                    <button onClick={() => trainerType === 'interval' ? playInterval(currentTarget.rootFreq, currentTarget.semitones, currentTarget.direction) : playChord(currentTarget.rootFreq, currentTarget.offsets)} className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}><Icon name="ear" size={48} fill="currentColor" /></button>
+                    <p className="text-slate-400 text-xs mb-6">Toca para escuchar {trainerType === 'interval' ? 'intervalo' : 'acorde'}</p>
                     <div className="grid grid-cols-2 gap-3">{currentOptions.map((opt) => (<button key={opt.id} onClick={() => handleAnswer(opt.id)} className="p-4 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 dark:text-white transition-all active:scale-95">{opt.name}</button>))}</div>
                 </div>
             );

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v61-FILENAME-FIX'; 
+const CACHE_NAME = 'gwt-pro-v65-FULL-FIX'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -28,11 +28,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   
-  // CRITICAL FIX: Bypass Service Worker for audio files.
-  // Browsers use Range requests for streaming audio, which simple cache strategies break,
-  // causing stuttering or failure to play on mobile devices.
   if (url.pathname.match(/\.(mp3|wav|ogg)$/i)) {
-    return; // Allow network to handle range requests directly
+    return; 
   }
 
   if (e.request.mode === 'navigate') {
