@@ -1030,7 +1030,12 @@
             const generateQuestion = (currentLvl) => {
                 let pool = [];
                 let config = null;
-                const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); // Lower range for chords
+                
+                // MODIFICADO: Ajuste de frecuencia base
+                // Si es acordes, usamos una base más grave (110Hz - A2) para dar cuerpo.
+                // Si es intervalos, mantenemos 220Hz (A3) para claridad.
+                const baseFreq = trainerType === 'chord' ? 110 : 220; 
+                const rootFreq = baseFreq * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
 
                 if (trainerType === 'interval') {
                     config = INTERVAL_LEVELS[currentLvl];

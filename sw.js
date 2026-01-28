@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v65-FULL-FIX'; 
+const CACHE_NAME = 'gwt-pro-v66-LOW-CHORDS'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
