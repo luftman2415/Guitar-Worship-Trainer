@@ -1031,11 +1031,8 @@
                 let pool = [];
                 let config = null;
                 
-                // MODIFICADO: Ajuste de frecuencia base
-                // Si es acordes, usamos una base más grave (110Hz - A2) para dar cuerpo.
-                // Si es intervalos, mantenemos 220Hz (A3) para claridad.
-                const baseFreq = trainerType === 'chord' ? 110 : 220; 
-                const rootFreq = baseFreq * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
+                // Base Freq A3 (220Hz)
+                const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
 
                 if (trainerType === 'interval') {
                     config = INTERVAL_LEVELS[currentLvl];
@@ -1046,7 +1043,6 @@
                     let dir = config.direction;
                     if (dir === 'random') dir = Math.random() < 0.5 ? 'asc' : 'desc';
                     setCurrentTarget({ ...target, rootFreq, direction: dir });
-                    // FIX: Force playback on next question
                     setTimeout(() => playInterval(rootFreq, target.semitones, dir, true), 400);
                 } else {
                     // CHORDS
@@ -1054,7 +1050,6 @@
                     pool = ALL_CHORDS.filter(c => config.types.includes(c.id));
                     const target = pool[Math.floor(Math.random() * pool.length)];
                     setCurrentTarget({ ...target, rootFreq });
-                    // FIX: Force playback on next question
                     setTimeout(() => playChord(rootFreq, target.offsets, true), 400);
                 }
             };
@@ -1094,7 +1089,7 @@
                 setTimeout(() => setIsPlaying(false), 1600);
             };
 
-            // Synth for Chords (Harmonic/Piano-like)
+            // Synth for Chords (Low Bass + High Triad)
             const playChord = async (rootFreq, offsets, override = false) => {
                 if (isPlaying && !override) return;
                 setIsPlaying(true);
@@ -1103,6 +1098,22 @@
 
                 const now = ctx.currentTime;
                 
+                // 1. LOW BASS (Octave Down)
+                const bassFreq = rootFreq / 2;
+                const bassOsc = ctx.createOscillator();
+                const bassGain = ctx.createGain();
+                bassOsc.type = 'triangle'; 
+                bassOsc.frequency.value = bassFreq;
+                bassOsc.connect(bassGain);
+                bassGain.connect(ctx.destination);
+                
+                bassGain.gain.setValueAtTime(0, now);
+                bassGain.gain.linearRampToValueAtTime(0.4, now + 0.05); // Attack
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0); // Decay
+                bassOsc.start(now);
+                bassOsc.stop(now + 2.1);
+
+                // 2. HIGH TRIAD (Original Register)
                 offsets.forEach((semitone, i) => {
                     const freq = rootFreq * Math.pow(2, semitone / 12);
                     
@@ -1110,20 +1121,18 @@
                     const gain = ctx.createGain();
                     const filter = ctx.createBiquadFilter();
 
-                    // Simulating Electric Piano
                     osc.type = 'triangle';
                     osc.frequency.value = freq;
 
                     filter.type = 'lowpass';
                     filter.frequency.setValueAtTime(3000, now);
-                    filter.frequency.exponentialRampToValueAtTime(500, now + 1.5); // Filter envelope
+                    filter.frequency.exponentialRampToValueAtTime(500, now + 1.5); 
 
                     osc.connect(filter);
                     filter.connect(gain);
                     gain.connect(ctx.destination);
 
-                    // Volume Envelope: Percussive attack, long decay
-                    const stagger = i * 0.03; // Strum effect (30ms)
+                    const stagger = i * 0.03; 
                     gain.gain.setValueAtTime(0, now + stagger);
                     gain.gain.linearRampToValueAtTime(0.25, now + stagger + 0.02);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + stagger + 2.0);
@@ -1170,7 +1179,12 @@
                                 <button key={lvl} onClick={() => startLevel(lvl)} className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden">
                                     <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name="play" size={60} className="text-fuchsia-500" /></div>
                                     <h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{config.name}</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{trainerType === 'interval' ? config.types.join(', ').substring(0, 30) + '...' : config.types.map(t => ALL_CHORDS.find(c=>c.id===t).name).join(', ')}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                        {trainerType === 'interval' 
+                                            ? (config.types[0] === 'All' ? 'Todos los intervalos aleatorios' : config.types.map(id => ALL_INTERVALS.find(i => i.id === id)?.name).join(', ').substring(0, 45) + '...')
+                                            : config.types.map(t => ALL_CHORDS.find(c=>c.id===t).name).join(', ')
+                                        }
+                                    </p>
                                 </button>
                             );
                         })}
