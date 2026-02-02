@@ -682,7 +682,7 @@
             const startRecording = async () => {
                 await resume(); 
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
                     mediaRecorderRef.current = new MediaRecorder(stream);
                     chunksRef.current = [];
                     mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data);
@@ -921,7 +921,7 @@
             const [currentTarget, setCurrentTarget] = useState(null); 
             const [lastError, setLastError] = useState(null);
             
-            const lastQuestionIdRef = useRef(null);
+            // Eliminada la referencia que forzaba no repetir
             
             const ALL_INTERVALS = [
                 { id: 'P1', name: "Unísono", semitones: 0 },
@@ -965,7 +965,6 @@
                 setLevel(lvl);
                 setQuestionCount(0);
                 setLastError(null);
-                lastQuestionIdRef.current = null;
                 generateQuestion(lvl);
                 setGameState('quiz');
             };
@@ -976,7 +975,6 @@
                 const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
 
                 let target = null;
-                let attempts = 0;
 
                 if (trainerType === 'interval') {
                     config = INTERVAL_LEVELS[currentLvl];
@@ -984,10 +982,8 @@
                     if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id);
                     pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id));
                     
-                    do {
-                        target = pool[Math.floor(Math.random() * pool.length)];
-                        attempts++;
-                    } while (pool.length > 1 && target.id === lastQuestionIdRef.current && attempts < 5);
+                    // Selección aleatoria simple (permite repetición de tipo, lo cual es más aleatorio)
+                    target = pool[Math.floor(Math.random() * pool.length)];
 
                     let dir = config.direction;
                     if (dir === 'random') dir = Math.random() < 0.5 ? 'asc' : 'desc';
@@ -997,15 +993,11 @@
                     config = CHORD_LEVELS[currentLvl];
                     pool = ALL_CHORDS.filter(c => config.types.includes(c.id));
                     
-                    do {
-                        target = pool[Math.floor(Math.random() * pool.length)];
-                        attempts++;
-                    } while (pool.length > 1 && target.id === lastQuestionIdRef.current && attempts < 5);
+                    // Selección aleatoria simple
+                    target = pool[Math.floor(Math.random() * pool.length)];
 
                     setCurrentTarget({ ...target, rootFreq });
                 }
-
-                lastQuestionIdRef.current = target.id;
 
                 setTimeout(() => {
                     if(trainerType === 'interval') {
