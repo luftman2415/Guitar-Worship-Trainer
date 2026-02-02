@@ -163,7 +163,7 @@
             return new Promise((resolve, reject) => {
                 const transaction = db.transaction([DB_STORE], 'readwrite');
                 const store = transaction.objectStore(DB_STORE);
-                const request = store.add(recording);
+                const request = store.put(recording); 
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject(request.error);
             });
@@ -175,6 +175,17 @@
                 const transaction = db.transaction([DB_STORE], 'readonly');
                 const store = transaction.objectStore(DB_STORE);
                 const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        };
+
+        const getRecordingById = async (id) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([DB_STORE], 'readonly');
+                const store = transaction.objectStore(DB_STORE);
+                const request = store.get(id);
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             });
@@ -647,7 +658,7 @@
             const mediaRecorderRef = useRef(null);
             const chunksRef = useRef([]);
             const timerRef = useRef(null);
-            const dialog = useDialog(); // Added Dialog Hook
+            const dialog = useDialog(); 
 
             useEffect(() => { loadRecordings(); }, []);
 
@@ -669,7 +680,7 @@
             };
 
             const startRecording = async () => {
-                await resume(); // FIX: Resume audio context immediately
+                await resume(); 
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorderRef.current = new MediaRecorder(stream);
@@ -746,10 +757,10 @@
             const mediaRecorderRef = useRef(null);
             const chunksRef = useRef([]);
             const sourceNodeRef = useRef(null);
-            const dialog = useDialog(); // Added Dialog Hook
+            const dialog = useDialog();
 
             const startRecording = async () => {
-                await resume(); // FIX: Resume audio context immediately
+                await resume(); 
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } });
                 mediaRecorderRef.current = new MediaRecorder(stream);
                 chunksRef.current = [];
@@ -779,7 +790,7 @@
             };
 
             const playLoop = async () => {
-                await resume(); // FIX: Resume audio context immediately
+                await resume();
                 const ctx = getContext();
                 if (!audioBuffer) return;
                 const source = ctx.createBufferSource();
@@ -879,7 +890,7 @@
                     if (startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); startTimeRef.current = 0; } 
                 } else { 
                     startTimeRef.current = Date.now(); 
-                    resume().then((ctx) => { // FIX: Resume audio context immediately
+                    resume().then((ctx) => { 
                         if(ctx) { 
                             currentNoteRef.current = 0; currentBarRef.current = 0; nextNoteTimeRef.current = ctx.currentTime + 0.05; 
                             setIsPlaying(true); scheduler(); 
@@ -897,89 +908,21 @@
 
             return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden animate-fade-in">
                 <h2 className="text-3xl font-black text-center mt-8 mb-2 dark:text-white">Metrónomo</h2>
-                <div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex flex-col gap-3 mt-3"><div className="flex items-center justify-between"><span className="text-sm dark:text-slate-300">Subir BPM</span><div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-600"><button onClick={() => setTrainerBpmInc(v => Math.max(1, v - 1))} className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:text-white">-</button><span className="font-bold w-6 text-center dark:text-white">{trainerBpmInc}</span><button onClick={() => setTrainerBpmInc(v => Math.min(20, v + 1))} className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:text-white">+</button></div></div><div className="flex items-center justify-between"><span className="text-sm dark:text-slate-300">Cada (Compases)</span><div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-600"><button onClick={() => setTrainerBars(v => Math.max(1, v - 1))} className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:text-white">-</button><span className="font-bold w-6 text-center dark:text-white">{trainerBars}</span><button onClick={() => setTrainerBars(v => Math.min(32, v + 1))} className="w-8 h-8 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded hover:bg-slate-200 dark:text-white">+</button></div></div></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
-        };
-
-        const ChordAnalyzer = () => {
-            const [input, setInput] = useState('');
-            const [analysis, setAnalysis] = useState(null);
-            const normalizeChord = (chordStr) => {
-                if(!chordStr) return null;
-                let c = chordStr.trim();
-                c = c.charAt(0).toUpperCase() + c.slice(1);
-                const match = c.match(/^([A-G][#b]?)(.*)$/);
-                if (!match) return null;
-                let root = match[1]; let quality = match[2]; 
-                const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
-                if (flatMap[root]) root = flatMap[root];
-                return { root, quality, original: c };
-            };
-            const analyzeChords = () => {
-                if (!input.trim()) return;
-                const rawChords = input.split(/[\s,-]+/).filter(c => c);
-                const chords = rawChords.map(normalizeChord).filter(c => c);
-                if (chords.length === 0) { setAnalysis({ error: "No se reconocieron acordes. Intenta usar notación americana (C, D, Em...)" }); return; }
-                let bestKey = null; let maxScore = -999;
-                const majorScaleIntervals = [0, 2, 4, 5, 7, 9, 11];
-                NOTES.forEach((keyRoot, keyIndex) => {
-                    let score = 0; const scaleNotesIndices = majorScaleIntervals.map(i => (keyIndex + i) % 12); const degrees = [];
-                    chords.forEach(chord => {
-                        const rootIndex = NOTES.indexOf(chord.root);
-                        if (rootIndex === -1) { score -= 10; degrees.push({ chord: chord.original, degree: '?', func: 'Error' }); return; }
-                        if (scaleNotesIndices.includes(rootIndex)) {
-                            score += 1; const degreeIndex = scaleNotesIndices.indexOf(rootIndex);
-                            const romanNumerals = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
-                            degrees.push({ chord: chord.original, degree: romanNumerals[degreeIndex], func: 'Diatónico' });
-                        } else { score -= 1; degrees.push({ chord: chord.original, degree: '?', func: 'Cromático' }); }
-                    });
-                    if (score > maxScore) { maxScore = score; bestKey = { root: keyRoot, type: 'Mayor', degrees }; }
-                });
-                if(bestKey) setAnalysis(bestKey);
-            };
-            
-            return (
-                <div className="space-y-6 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
-                        <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">Descubre la tonalidad de tu canción ingresando los acordes.</p>
-                        <div className="flex flex-col sm:flex-row gap-2 mb-6">
-                            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && analyzeChords()} placeholder="Ej: G D Em C" className="flex-1 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-violet-500 dark:text-white font-mono text-lg"/>
-                            <button onClick={analyzeChords} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 sm:py-0 rounded-xl font-bold transition-colors w-full sm:w-auto">Analizar</button>
-                        </div>
-                        {analysis && !analysis.error && (
-                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 text-left animate-fade-in">
-                                <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tonalidad Detectada</p>
-                                        <h3 className="text-3xl font-black text-slate-800 dark:text-white">{analysis.root} <span className="text-violet-500">{analysis.type}</span></h3>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    {analysis.degrees.map((d, i) => (
-                                        <div key={i} className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
-                                            <div className="text-xl font-bold dark:text-white mb-1">{d.chord}</div>
-                                            <div className="inline-block px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded text-xs font-bold mb-1">{d.degree}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {analysis?.error && (<div className="p-4 bg-red-100 text-red-600 rounded-xl font-bold text-sm">{analysis.error}</div>)}
-                    </div>
-                </div>
-            );
+                <div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>);
         };
 
         const EarTrainer = () => {
             const { resume, getContext } = useAudioContext();
             const [gameState, setGameState] = useState('menu'); 
-            const [trainerType, setTrainerType] = useState('interval'); // 'interval' or 'chord'
+            const [trainerType, setTrainerType] = useState('interval'); 
             const [level, setLevel] = useState(1);
             const [questionCount, setQuestionCount] = useState(0); 
             const [isPlaying, setIsPlaying] = useState(false);
-            const [currentTarget, setCurrentTarget] = useState(null); // Contains interval or chord data
-            const [lastError, setLastError] = useState(null); 
+            const [currentTarget, setCurrentTarget] = useState(null); 
+            const [lastError, setLastError] = useState(null);
             
-            // --- INTERVALS DATA ---
+            const lastQuestionIdRef = useRef(null);
+            
             const ALL_INTERVALS = [
                 { id: 'P1', name: "Unísono", semitones: 0 },
                 { id: 'm2', name: "2da Menor", semitones: 1 },
@@ -1002,7 +945,6 @@
                 3: { name: "Nivel 3: Maestro (Mix)", types: ['All'], direction: 'random' }
             };
 
-            // --- CHORDS DATA ---
             const ALL_CHORDS = [
                 { id: 'M', name: 'Mayor', offsets: [0, 4, 7] },
                 { id: 'm', name: 'Menor', offsets: [0, 3, 7] },
@@ -1023,6 +965,7 @@
                 setLevel(lvl);
                 setQuestionCount(0);
                 setLastError(null);
+                lastQuestionIdRef.current = null;
                 generateQuestion(lvl);
                 setGameState('quiz');
             };
@@ -1030,31 +973,49 @@
             const generateQuestion = (currentLvl) => {
                 let pool = [];
                 let config = null;
-                
-                // Base Freq A3 (220Hz)
                 const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); 
+
+                let target = null;
+                let attempts = 0;
 
                 if (trainerType === 'interval') {
                     config = INTERVAL_LEVELS[currentLvl];
                     let possibleIds = config.types;
                     if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id);
                     pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id));
-                    const target = pool[Math.floor(Math.random() * pool.length)];
+                    
+                    do {
+                        target = pool[Math.floor(Math.random() * pool.length)];
+                        attempts++;
+                    } while (pool.length > 1 && target.id === lastQuestionIdRef.current && attempts < 5);
+
                     let dir = config.direction;
                     if (dir === 'random') dir = Math.random() < 0.5 ? 'asc' : 'desc';
                     setCurrentTarget({ ...target, rootFreq, direction: dir });
-                    setTimeout(() => playInterval(rootFreq, target.semitones, dir, true), 400);
+                    
                 } else {
-                    // CHORDS
                     config = CHORD_LEVELS[currentLvl];
                     pool = ALL_CHORDS.filter(c => config.types.includes(c.id));
-                    const target = pool[Math.floor(Math.random() * pool.length)];
+                    
+                    do {
+                        target = pool[Math.floor(Math.random() * pool.length)];
+                        attempts++;
+                    } while (pool.length > 1 && target.id === lastQuestionIdRef.current && attempts < 5);
+
                     setCurrentTarget({ ...target, rootFreq });
-                    setTimeout(() => playChord(rootFreq, target.offsets, true), 400);
                 }
+
+                lastQuestionIdRef.current = target.id;
+
+                setTimeout(() => {
+                    if(trainerType === 'interval') {
+                        playInterval(rootFreq, target.semitones, currentTarget ? currentTarget.direction : 'asc', true);
+                    } else {
+                        playChord(rootFreq, target.offsets, true);
+                    }
+                }, 400);
             };
 
-            // Synth for Intervals (Melodic)
             const playInterval = async (rootFreq, semitones, direction, override = false) => {
                 if (isPlaying && !override) return;
                 setIsPlaying(true);
@@ -1089,7 +1050,6 @@
                 setTimeout(() => setIsPlaying(false), 1600);
             };
 
-            // Synth for Chords (Low Bass + High Triad)
             const playChord = async (rootFreq, offsets, override = false) => {
                 if (isPlaying && !override) return;
                 setIsPlaying(true);
@@ -1098,7 +1058,6 @@
 
                 const now = ctx.currentTime;
                 
-                // 1. LOW BASS (Octave Down)
                 const bassFreq = rootFreq / 2;
                 const bassOsc = ctx.createOscillator();
                 const bassGain = ctx.createGain();
@@ -1108,12 +1067,11 @@
                 bassGain.connect(ctx.destination);
                 
                 bassGain.gain.setValueAtTime(0, now);
-                bassGain.gain.linearRampToValueAtTime(0.4, now + 0.05); // Attack
-                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0); // Decay
+                bassGain.gain.linearRampToValueAtTime(0.4, now + 0.05); 
+                bassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0); 
                 bassOsc.start(now);
                 bassOsc.stop(now + 2.1);
 
-                // 2. HIGH TRIAD (Original Register)
                 offsets.forEach((semitone, i) => {
                     const freq = rootFreq * Math.pow(2, semitone / 12);
                     
@@ -1236,6 +1194,339 @@
                     <button onClick={() => trainerType === 'interval' ? playInterval(currentTarget.rootFreq, currentTarget.semitones, currentTarget.direction) : playChord(currentTarget.rootFreq, currentTarget.offsets)} className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}><Icon name="ear" size={48} fill="currentColor" /></button>
                     <p className="text-slate-400 text-xs mb-6">Toca para escuchar {trainerType === 'interval' ? 'intervalo' : 'acorde'}</p>
                     <div className="grid grid-cols-2 gap-3">{currentOptions.map((opt) => (<button key={opt.id} onClick={() => handleAnswer(opt.id)} className="p-4 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 dark:text-white transition-all active:scale-95">{opt.name}</button>))}</div>
+                </div>
+            );
+        };
+
+        const SongBook = () => {
+            const [view, setView] = useState('list');
+            const [songs, setSongs] = useState(() => {
+                const saved = localStorage.getItem('gwt_songs');
+                return saved ? JSON.parse(saved) : [];
+            });
+            const [currentSong, setCurrentSong] = useState(null);
+            const dialog = useDialog();
+            
+            // Helper function to save song audio separately in IndexedDB to avoid localStorage quota
+            const saveSongAudio = async (id, blob) => {
+                if(!blob) return;
+                await saveRecordingToDB({ id: `song_${id}_audio`, blob, date: new Date() });
+            };
+
+            const getSongAudio = async (id) => {
+                try {
+                    const record = await getRecordingById(`song_${id}_audio`);
+                    return record ? URL.createObjectURL(record.blob) : null;
+                } catch(e) { return null; }
+            };
+
+            useEffect(() => { localStorage.setItem('gwt_songs', JSON.stringify(songs)); }, [songs]);
+
+            const saveSong = async (song, audioFile) => {
+                let savedSong = { ...song };
+                if (!savedSong.id) savedSong.id = Date.now();
+                
+                if (audioFile) {
+                    savedSong.hasAudio = true;
+                    await saveSongAudio(savedSong.id, audioFile);
+                }
+
+                if (song.id) { 
+                    setSongs(songs.map(s => s.id === song.id ? savedSong : s)); 
+                } else { 
+                    setSongs([...songs, savedSong]); 
+                }
+                setView('list');
+            };
+
+            const deleteSong = (id, e) => {
+                e.stopPropagation();
+                dialog.confirm({
+                    title: "¿Eliminar canción?",
+                    message: "Se borrará la letra, acordes y el audio asociado.",
+                    onConfirm: async () => {
+                        setSongs(songs.filter(s => s.id !== id));
+                        await deleteRecordingFromDB(`song_${id}_audio`);
+                    }
+                });
+            };
+
+            // --- CHORD BUILDER COMPONENT ---
+            const ChordBuilder = ({ initialData, onSave, onCancel }) => {
+                const [name, setName] = useState(initialData?.name || 'Nuevo Acorde');
+                // Dots: array of { string (0-5), fret (0-4), type: 'note' | 'root' }
+                const [dots, setDots] = useState(initialData?.dots || []);
+                const [muted, setMuted] = useState(initialData?.muted || [false,false,false,false,false,false]); // Array of booleans for 6 strings
+                
+                const toggleStringState = (stringIdx) => {
+                    // Cycle: Open -> Muted -> Open (if no dot on fret 0)
+                    // Visual logic: Top bar click
+                    const newMuted = [...muted];
+                    newMuted[stringIdx] = !newMuted[stringIdx];
+                    setMuted(newMuted);
+                };
+
+                const handleFretClick = (stringIdx, fret) => {
+                    const existingDotIndex = dots.findIndex(d => d.string === stringIdx && d.fret === fret);
+                    
+                    if (existingDotIndex >= 0) {
+                        const dot = dots[existingDotIndex];
+                        // Cycle: Normal -> Root -> Remove
+                        if (dot.type === 'note') {
+                            const newDots = [...dots];
+                            newDots[existingDotIndex].type = 'root';
+                            setDots(newDots);
+                        } else {
+                            setDots(dots.filter((_, i) => i !== existingDotIndex));
+                        }
+                    } else {
+                        // Remove other dots on same string first (single note per string usually)
+                        const cleanDots = dots.filter(d => d.string !== stringIdx);
+                        setDots([...cleanDots, { string: stringIdx, fret, type: 'note' }]);
+                        // Unmute string if we place a dot
+                        const newMuted = [...muted];
+                        newMuted[stringIdx] = false;
+                        setMuted(newMuted);
+                    }
+                };
+
+                return (
+                    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-modal border border-slate-200 dark:border-slate-700">
+                            <h3 className="text-lg font-bold mb-4 dark:text-white">Constructor de Acordes</h3>
+                            <input value={name} onChange={e => setName(e.target.value)} className="w-full p-2 mb-4 bg-slate-100 dark:bg-slate-700 rounded border dark:border-slate-600 dark:text-white font-bold text-center" placeholder="Nombre (Ej: Gadd9)"/>
+                            
+                            <div className="relative w-[200px] h-[240px] mx-auto bg-white dark:bg-slate-900 border-2 border-slate-800 dark:border-slate-600 rounded select-none mb-6">
+                                {/* Frets Lines */}
+                                {[1,2,3,4].map(i => (
+                                    <div key={i} className="absolute w-full h-[1px] bg-slate-300 dark:bg-slate-600" style={{ top: `${i * 20}%` }}></div>
+                                ))}
+                                {/* Strings Lines */}
+                                {[0,1,2,3,4,5].map(i => (
+                                    <div key={i} className="absolute h-full w-[1px] bg-slate-800 dark:bg-slate-500" style={{ left: `${10 + i * 16}%` }}></div>
+                                ))}
+                                
+                                {/* Top Indicators (Muted/Open) */}
+                                <div className="absolute -top-6 w-full flex justify-between px-[10%]">
+                                    {[0,1,2,3,4,5].map(s => (
+                                        <div key={s} onClick={() => toggleStringState(s)} className="cursor-pointer w-6 text-center text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white" style={{ position: 'absolute', left: `${10 + s * 16}%`, transform: 'translateX(-50%)' }}>
+                                            {muted[s] ? 'X' : (dots.some(d => d.string === s) ? '' : 'O')}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Clickable Grid */}
+                                {[0,1,2,3,4].map(fret => (
+                                    <div key={fret} className="absolute w-full h-[20%]" style={{ top: `${fret * 20}%` }}>
+                                        {[0,1,2,3,4,5].map(str => {
+                                            const dot = dots.find(d => d.string === str && d.fret === fret + 1);
+                                            return (
+                                                <div key={str} onClick={() => handleFretClick(str, fret + 1)} className="absolute w-[16%] h-full cursor-pointer flex items-center justify-center" style={{ left: `${10 + str * 16}%`, transform: 'translateX(-50%)' }}>
+                                                    {dot && (
+                                                        <div className={`w-4 h-4 rounded-full shadow-sm z-10 ${dot.type === 'root' ? 'bg-green-500 ring-2 ring-green-200' : 'bg-slate-800 dark:bg-white'}`}></div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <p className="text-[10px] text-center text-slate-400 mb-4">Click para nota • Click de nuevo para <span className="text-green-500 font-bold">Tónica</span> • Arriba para X/O</p>
+
+                            <div className="flex gap-2">
+                                <button onClick={() => onSave({ name, dots, muted })} className="flex-1 bg-cyan-600 text-white py-2 rounded-xl font-bold">Guardar</button>
+                                <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-500 font-bold rounded-xl">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const ChordDisplay = ({ chord, size = "small" }) => {
+                if (!chord) return null;
+                const scale = size === "small" ? 0.6 : 1;
+                return (
+                    <div className="flex flex-col items-center mx-2 mb-2">
+                        <div className="relative bg-white dark:bg-slate-900 border border-slate-800 dark:border-slate-500 rounded-sm" style={{ width: `${80 * scale}px`, height: `${100 * scale}px` }}>
+                             {/* Frets */}
+                             {[1,2,3,4].map(i => <div key={i} className="absolute w-full h-[1px] bg-slate-300 dark:bg-slate-600" style={{ top: `${i * 20}%` }}></div>)}
+                             {/* Strings */}
+                             {[0,1,2,3,4,5].map(i => <div key={i} className="absolute h-full w-[1px] bg-slate-800 dark:bg-slate-500" style={{ left: `${10 + i * 16}%` }}></div>)}
+                             {/* Dots */}
+                             {chord.dots.map((d, i) => (
+                                 <div key={i} className={`absolute w-[20%] h-[16%] rounded-full top-[${(d.fret-1)*20}%] ${d.type === 'root' ? 'bg-green-500' : 'bg-slate-800 dark:bg-white'}`} 
+                                      style={{ 
+                                          left: `${10 + d.string * 16}%`, 
+                                          top: `${(d.fret - 1) * 20 + 2}%`,
+                                          transform: 'translateX(-50%)',
+                                          width: `${12*scale}px`, height: `${12*scale}px`
+                                      }}></div>
+                             ))}
+                             {/* Muted/Open */}
+                             {chord.muted.map((m, s) => (
+                                 m && <div key={s} className="absolute -top-[15px] text-[8px] font-bold text-slate-500" style={{ left: `${10 + s * 16}%`, transform: 'translateX(-50%)' }}>X</div>
+                             ))}
+                        </div>
+                        <span className={`font-bold mt-1 dark:text-white ${size==='small'?'text-[10px]':'text-sm'}`}>{chord.name}</span>
+                    </div>
+                );
+            };
+
+            const SongEditor = ({ song = {}, onSave, onCancel }) => {
+                const [title, setTitle] = useState(song.title || '');
+                const [artist, setArtist] = useState(song.artist || '');
+                const [body, setBody] = useState(song.body || '');
+                const [key, setKey] = useState(song.key || '');
+                const [bpm, setBpm] = useState(song.bpm || '');
+                const [customChords, setCustomChords] = useState(song.customChords || []);
+                const [audioFile, setAudioFile] = useState(null);
+                const [showChordBuilder, setShowChordBuilder] = useState(false);
+
+                const handleAddChord = (chordData) => {
+                    setCustomChords([...customChords, chordData]);
+                    setShowChordBuilder(false);
+                };
+
+                const removeChord = (idx) => {
+                    setCustomChords(customChords.filter((_, i) => i !== idx));
+                };
+
+                return (
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in relative">
+                        <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
+                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white font-bold" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
+                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
+                        <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="Tono (Ej: G)" value={key} onChange={e => setKey(e.target.value)} />
+                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="BPM (Ej: 72)" type="number" value={bpm} onChange={e => setBpm(e.target.value)} />
+                        </div>
+                        
+                        <div className="mb-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border-dashed border-2 border-slate-200 dark:border-slate-700">
+                            <label className="flex flex-col items-center cursor-pointer">
+                                <span className="text-xs font-bold text-slate-500 mb-2">MP3 de la canción {song.hasAudio ? '(Ya existe, subir para reemplazar)' : ''}</span>
+                                <input type="file" accept="audio/*" className="hidden" onChange={e => setAudioFile(e.target.files[0])} />
+                                <span className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-lg text-xs font-bold dark:text-white">{audioFile ? audioFile.name : 'Seleccionar Archivo'}</span>
+                            </label>
+                        </div>
+
+                        <div className="mb-4">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold text-slate-500 uppercase">Diagramas de Acordes</span>
+                                <button onClick={() => setShowChordBuilder(true)} className="text-xs bg-cyan-100 text-cyan-700 px-2 py-1 rounded font-bold hover:bg-cyan-200">+ Crear Acorde</button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 bg-slate-50 dark:bg-slate-900 p-2 rounded-xl min-h-[120px] items-center">
+                                {customChords.length === 0 && <span className="text-xs text-slate-400 mx-auto">No hay acordes personalizados.</span>}
+                                {customChords.map((chord, idx) => (
+                                    <div key={idx} className="relative group">
+                                        <ChordDisplay chord={chord} size="small" />
+                                        <button onClick={() => removeChord(idx)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">×</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <textarea className="w-full mb-4 p-4 h-64 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 font-mono text-sm dark:text-white whitespace-pre-wrap" placeholder="Pega aquí la letra y acordes..." value={body} onChange={e => setBody(e.target.value)}></textarea>
+                        
+                        <div className="flex gap-3">
+                            <button onClick={() => onSave({ ...song, title, artist, body, key, bpm, customChords }, audioFile)} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar Todo</button>
+                            <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold">Cancelar</button>
+                        </div>
+
+                        {showChordBuilder && <ChordBuilder onSave={handleAddChord} onCancel={() => setShowChordBuilder(false)} />}
+                    </div>
+                );
+            };
+
+            const SongDetail = ({ song, onBack, onEdit }) => {
+                const [audioUrl, setAudioUrl] = useState(null);
+                const audioRef = useRef(null);
+                const [isPlaying, setIsPlaying] = useState(false);
+
+                useEffect(() => {
+                    if (song.hasAudio) {
+                        getSongAudio(song.id).then(url => { if(url) setAudioUrl(url); });
+                    }
+                    return () => { if(audioUrl) URL.revokeObjectURL(audioUrl); };
+                }, [song.id]);
+
+                const togglePlay = () => {
+                    if (audioRef.current) {
+                        if (isPlaying) audioRef.current.pause(); else audioRef.current.play();
+                        setIsPlaying(!isPlaying);
+                    }
+                };
+
+                return (
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in flex flex-col h-[calc(100vh-140px)] md:h-auto">
+                        <div className="flex justify-between items-start mb-4 shrink-0">
+                            <button onClick={onBack} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="rewind" size={20}/></button>
+                            <div className="text-center">
+                                <h2 className="text-xl font-black dark:text-white">{song.title}</h2>
+                                <p className="text-cyan-600 font-bold text-sm">{song.artist}</p>
+                                {(song.key || song.bpm) && (
+                                    <div className="flex justify-center gap-2 mt-1">
+                                        {song.key && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 font-bold">Key: {song.key}</span>}
+                                        {song.bpm && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 font-bold">BPM: {song.bpm}</span>}
+                                    </div>
+                                )}
+                            </div>
+                            <button onClick={onEdit} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="edit" size={20}/></button>
+                        </div>
+
+                        {audioUrl && (
+                            <div className="mb-4 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl flex items-center gap-3 shrink-0">
+                                <button onClick={togglePlay} className="w-10 h-10 rounded-full bg-cyan-600 text-white flex items-center justify-center shrink-0">
+                                    <Icon name={isPlaying ? "pause" : "play"} size={16} fill="currentColor" />
+                                </button>
+                                <audio ref={audioRef} src={audioUrl} onEnded={() => setIsPlaying(false)} className="w-full h-8" controls />
+                            </div>
+                        )}
+
+                        <div className="flex-1 overflow-y-auto min-h-0 border-t border-b border-slate-100 dark:border-slate-700 py-4 mb-4">
+                            <pre className="whitespace-pre-wrap font-mono text-sm dark:text-slate-300 leading-relaxed">{song.body}</pre>
+                        </div>
+
+                        {song.customChords && song.customChords.length > 0 && (
+                            <div className="shrink-0 overflow-x-auto pb-2">
+                                <p className="text-xs font-bold text-slate-400 mb-2 uppercase">Acordes de la canción</p>
+                                <div className="flex gap-4">
+                                    {song.customChords.map((chord, i) => <ChordDisplay key={i} chord={chord} />)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => setView('list')} />;
+            if (view === 'detail') return <SongDetail song={currentSong} onBack={() => setView('list')} onEdit={() => setView('editor')} />;
+
+            return (
+                <div className="max-w-2xl mx-auto">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2"><Icon name="book" className="text-cyan-500"/> Repertorio</h2>
+                        <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-cyan-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
+                    </div>
+                    <div className="grid gap-3">
+                        {songs.length === 0 && <p className="text-center text-slate-400 py-8 italic">No hay canciones guardadas.</p>}
+                        {songs.map(song => (
+                            <div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500 transition-colors group">
+                                <div>
+                                    <h3 className="font-bold dark:text-white flex items-center gap-2">
+                                        {song.title}
+                                        {song.hasAudio && <Icon name="music" size={12} className="text-cyan-500"/>}
+                                    </h3>
+                                    <div className="flex gap-2 items-center">
+                                        <p className="text-xs text-slate-500">{song.artist}</p>
+                                        {(song.key || song.bpm) && <span className="text-[10px] text-slate-400">•</span>}
+                                        {song.key && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 rounded text-slate-500 font-bold">{song.key}</span>}
+                                    </div>
+                                </div>
+                                <button onClick={(e) => deleteSong(song.id, e)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             );
         };
@@ -1405,6 +1696,75 @@
             );
         };
 
+        const ChordAnalyzer = () => {
+            const [input, setInput] = useState('');
+            const [analysis, setAnalysis] = useState(null);
+            const normalizeChord = (chordStr) => {
+                if(!chordStr) return null;
+                let c = chordStr.trim();
+                c = c.charAt(0).toUpperCase() + c.slice(1);
+                const match = c.match(/^([A-G][#b]?)(.*)$/);
+                if (!match) return null;
+                let root = match[1]; let quality = match[2]; 
+                const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+                if (flatMap[root]) root = flatMap[root];
+                return { root, quality, original: c };
+            };
+            const analyzeChords = () => {
+                if (!input.trim()) return;
+                const rawChords = input.split(/[\s,-]+/).filter(c => c);
+                const chords = rawChords.map(normalizeChord).filter(c => c);
+                if (chords.length === 0) { setAnalysis({ error: "No se reconocieron acordes. Intenta usar notación americana (C, D, Em...)" }); return; }
+                let bestKey = null; let maxScore = -999;
+                const majorScaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+                NOTES.forEach((keyRoot, keyIndex) => {
+                    let score = 0; const scaleNotesIndices = majorScaleIntervals.map(i => (keyIndex + i) % 12); const degrees = [];
+                    chords.forEach(chord => {
+                        const rootIndex = NOTES.indexOf(chord.root);
+                        if (rootIndex === -1) { score -= 10; degrees.push({ chord: chord.original, degree: '?', func: 'Error' }); return; }
+                        if (scaleNotesIndices.includes(rootIndex)) {
+                            score += 1; const degreeIndex = scaleNotesIndices.indexOf(rootIndex);
+                            const romanNumerals = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
+                            degrees.push({ chord: chord.original, degree: romanNumerals[degreeIndex], func: 'Diatónico' });
+                        } else { score -= 1; degrees.push({ chord: chord.original, degree: '?', func: 'Cromático' }); }
+                    });
+                    if (score > maxScore) { maxScore = score; bestKey = { root: keyRoot, type: 'Mayor', degrees }; }
+                });
+                if(bestKey) setAnalysis(bestKey);
+            };
+            
+            return (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center">
+                        <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">Descubre la tonalidad de tu canción ingresando los acordes.</p>
+                        <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && analyzeChords()} placeholder="Ej: G D Em C" className="flex-1 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-violet-500 dark:text-white font-mono text-lg"/>
+                            <button onClick={analyzeChords} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 sm:py-0 rounded-xl font-bold transition-colors w-full sm:w-auto">Analizar</button>
+                        </div>
+                        {analysis && !analysis.error && (
+                            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 text-left animate-fade-in">
+                                <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-700 pb-4 mb-4">
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tonalidad Detectada</p>
+                                        <h3 className="text-3xl font-black text-slate-800 dark:text-white">{analysis.root} <span className="text-violet-500">{analysis.type}</span></h3>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                    {analysis.degrees.map((d, i) => (
+                                        <div key={i} className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 text-center">
+                                            <div className="text-xl font-bold dark:text-white mb-1">{d.chord}</div>
+                                            <div className="inline-block px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded text-xs font-bold mb-1">{d.degree}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {analysis?.error && (<div className="p-4 bg-red-100 text-red-600 rounded-xl font-bold text-sm">{analysis.error}</div>)}
+                    </div>
+                </div>
+            );
+        };
+
         const TheoryHub = () => {
             const [activeTool, setActiveTool] = useState('circle'); 
             return (
@@ -1518,105 +1878,6 @@
                     <div className="flex gap-4 justify-center">
                         <button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button>
                         <button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button>
-                    </div>
-                </div>
-            );
-        };
-
-        const SongBook = () => {
-            const [view, setView] = useState('list');
-            const [songs, setSongs] = useState(() => {
-                const saved = localStorage.getItem('gwt_songs');
-                return saved ? JSON.parse(saved) : [];
-            });
-            const [currentSong, setCurrentSong] = useState(null);
-            const dialog = useDialog();
-            
-            useEffect(() => { localStorage.setItem('gwt_songs', JSON.stringify(songs)); }, [songs]);
-
-            const saveSong = (song) => {
-                if (song.id) { setSongs(songs.map(s => s.id === song.id ? song : s)); } 
-                else { setSongs([...songs, { ...song, id: Date.now() }]); }
-                setView('list');
-            };
-
-            const deleteSong = (id, e) => {
-                e.stopPropagation();
-                dialog.confirm({
-                    title: "¿Eliminar canción?",
-                    message: "Esta canción se borrará de tu repertorio permanentemente.",
-                    onConfirm: () => setSongs(songs.filter(s => s.id !== id))
-                });
-            };
-
-            const SongEditor = ({ song = {}, onSave, onCancel }) => {
-                const [title, setTitle] = useState(song.title || '');
-                const [artist, setArtist] = useState(song.artist || '');
-                const [body, setBody] = useState(song.body || '');
-                const [key, setKey] = useState(song.key || '');
-                const [bpm, setBpm] = useState(song.bpm || '');
-
-                return (
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
-                        <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
-                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white font-bold" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
-                        <input className="w-full mb-3 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white" placeholder="Artista" value={artist} onChange={e => setArtist(e.target.value)} />
-                        <div className="flex flex-col sm:flex-row gap-3 mb-3">
-                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="Tono (Ej: G)" value={key} onChange={e => setKey(e.target.value)} />
-                            <input className="flex-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 dark:text-white text-sm" placeholder="BPM (Ej: 72)" type="number" value={bpm} onChange={e => setBpm(e.target.value)} />
-                        </div>
-                        <textarea className="w-full mb-4 p-4 h-64 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 font-mono text-sm dark:text-white" placeholder="Letra y Acordes..." value={body} onChange={e => setBody(e.target.value)}></textarea>
-                        <div className="flex gap-3">
-                            <button onClick={() => onSave({ ...song, title, artist, body, key, bpm })} className="flex-1 bg-cyan-600 text-white py-3 rounded-xl font-bold">Guardar</button>
-                            <button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold">Cancelar</button>
-                        </div>
-                    </div>
-                );
-            };
-
-            if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => setView('list')} />;
-
-            if (view === 'detail') return (
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in">
-                    <div className="flex justify-between items-start mb-6">
-                        <button onClick={() => setView('list')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="rewind" size={20}/></button>
-                        <div className="text-center">
-                            <h2 className="text-2xl font-black dark:text-white">{currentSong.title}</h2>
-                            <p className="text-cyan-600 font-bold">{currentSong.artist}</p>
-                            {(currentSong.key || currentSong.bpm) && (
-                                <div className="flex justify-center gap-3 mt-2">
-                                    {currentSong.key && <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500 font-bold">Key: {currentSong.key}</span>}
-                                    {currentSong.bpm && <span className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded text-slate-500 font-bold">BPM: {currentSong.bpm}</span>}
-                                </div>
-                            )}
-                        </div>
-                        <button onClick={() => setView('editor')} className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full"><Icon name="edit" size={20}/></button>
-                    </div>
-                    <pre className="whitespace-pre-wrap font-mono text-sm dark:text-slate-300 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl overflow-x-auto">{currentSong.body}</pre>
-                </div>
-            );
-
-            return (
-                <div className="max-w-2xl mx-auto">
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold dark:text-white flex items-center gap-2"><Icon name="book" className="text-cyan-500"/> Repertorio</h2>
-                        <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-cyan-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
-                    </div>
-                    <div className="grid gap-3">
-                        {songs.length === 0 && <p className="text-center text-slate-400 py-8 italic">No hay canciones guardadas.</p>}
-                        {songs.map(song => (
-                            <div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-cyan-500 transition-colors group">
-                                <div>
-                                    <h3 className="font-bold dark:text-white">{song.title}</h3>
-                                    <div className="flex gap-2 items-center">
-                                        <p className="text-xs text-slate-500">{song.artist}</p>
-                                        {(song.key || song.bpm) && <span className="text-[10px] text-slate-400">•</span>}
-                                        {song.key && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 rounded text-slate-500 font-bold">{song.key}</span>}
-                                    </div>
-                                </div>
-                                <button onClick={(e) => deleteSong(song.id, e)} className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button>
-                            </div>
-                        ))}
                     </div>
                 </div>
             );

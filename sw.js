@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gwt-pro-v68-SYNTAX-FIX'; 
+const CACHE_NAME = 'gwt-pro-v69-SONGBOOK-PRO'; 
 const STATIC_ASSETS = [
   './',
   './index.html',
