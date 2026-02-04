@@ -182,10 +182,11 @@
             if (size === "large") { scale = 2.8; }
 
             const fretStyle = {
-                fontSize: size === 'large' ? '18px' : `${14 * scale}px`, 
-                right: size === 'large' ? '12px' : '4%', 
-                top: size === 'large' ? '12px' : '5%',   
-                zIndex: 5,
+                fontSize: size === 'large' ? '20px' : `${14 * scale}px`, 
+                right: size === 'large' ? '16px' : '6%', 
+                top: size === 'large' ? '16px' : '8%',   
+                fontWeight: '900',
+                zIndex: 20,
                 color: '#64748b' // slate-500
             };
 
@@ -196,9 +197,9 @@
                             {[1,2,3,4].map(i => <div key={i} className="absolute w-full h-[1px] bg-slate-300 dark:bg-slate-600" style={{ top: `${i * 20}%` }}></div>)}
                             {[0,1,2,3,4,5].map(i => <div key={i} className="absolute h-full w-[1px] bg-slate-800 dark:bg-slate-500" style={{ left: `${10 + i * 16}%` }}></div>)}
                             
-                            {/* Fret Label - Inside Top Right */}
+                            {/* Fret Label - Corner Right */}
                             {chord.baseFret > 1 && (
-                                <div className="absolute font-black leading-none pointer-events-none dark:text-slate-400" style={fretStyle}>
+                                <div className="absolute leading-none pointer-events-none dark:text-slate-400" style={fretStyle}>
                                     T{chord.baseFret}
                                 </div>
                             )}
@@ -221,7 +222,7 @@
         };
 
         const TrackTrainer = () => {
-            const [view, setView] = useState('list'); const [activeTab, setActiveTab] = useState('my_songs'); const [songs, setSongs] = useState(() => { const saved = localStorage.getItem('gwt_songs'); return saved ? JSON.parse(saved) : []; }); const [currentSong, setCurrentSong] = useState(null); const dialog = useDialog();
+            const [view, setView] = useState('list'); const [activeTab, setActiveTab] = useState('class'); const [songs, setSongs] = useState(() => { const saved = localStorage.getItem('gwt_songs'); return saved ? JSON.parse(saved) : []; }); const [currentSong, setCurrentSong] = useState(null); const dialog = useDialog();
             const TEACHER_TRACKS = [{ id: 't1', title: "La Sunamita", artist: "Montesanto", filename: "La Sunamita.mp3", isTeacher: true }, { id: 't2', title: "No hay lugar más alto", artist: "Miel San Marcos", filename: "No hay lugar mas alto.mp3", isTeacher: true }, { id: 't3', title: "Santo es el que vive", artist: "Montesanto", filename: "Santo es el que vive.mp3", isTeacher: true }, { id: 't4', title: "Si tu presencia conmigo no va", artist: "Oasis Ministry", filename: "Si tu presencia conmigo no va.mp3", isTeacher: true }, { id: 't5', title: "Tus cuerdas de amor", artist: "Julio Melgar", filename: "Tus cuerdas de amor.mp3", isTeacher: true }];
             useEffect(() => { localStorage.setItem('gwt_songs', JSON.stringify(songs)); }, [songs]);
             const saveSongAudio = async (id, blob) => { if(!blob) return; try { await saveRecordingToDB({ id: `song_${id}_audio`, blob, date: new Date() }); } catch(e) { console.error("Error guardando audio:", e); } };
@@ -243,50 +244,57 @@
 
             return (
                 <div className="space-y-6 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold dark:text-white">Canciones de Clase</h2>
-                            <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">Oficial</span>
-                        </div>
-                        <div className="space-y-3">
-                            {TEACHER_TRACKS.map(t => (
-                                <div key={t.id} onClick={() => { setCurrentSong(t); setView('player'); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 group transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 shadow-sm font-bold group-hover:text-indigo-600 group-hover:scale-110 transition-all">{t.id.replace('t','')}</div>
-                                        <div><h3 className="font-bold text-slate-800 dark:text-white">{t.title}</h3><p className="text-xs text-slate-500">{t.artist}</p></div>
-                                    </div>
-                                    <Icon name="play" className="text-slate-300 group-hover:text-indigo-600" size={20}/>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-xl mb-6">
+                        <button onClick={() => setActiveTab('class')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'class' ? 'bg-white dark:bg-slate-600 shadow text-brand-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Repertorio Clase</button>
+                        <button onClick={() => setActiveTab('my_songs')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'my_songs' ? 'bg-white dark:bg-slate-600 shadow text-brand-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Mis Canciones</button>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 relative">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-2xl font-bold dark:text-white">Mis Canciones</h2>
-                            <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-lg shadow-brand-500/30 active:scale-95 transition-all flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
-                        </div>
-                        {songs.length === 0 ? (
-                            <div className="text-center py-10 border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-2xl">
-                                <p className="text-slate-400 text-sm mb-4">Añade tus propias canciones con letra y audio.</p>
+                    {activeTab === 'class' ? (
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold dark:text-white">Canciones Oficiales</h2>
+                                <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">Pro</span>
                             </div>
-                        ) : (
                             <div className="space-y-3">
-                                {songs.map(s => (
-                                    <div key={s.id} onClick={() => { setCurrentSong(s); setView('player'); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 group transition-all">
-                                        <div className="flex items-center gap-4 overflow-hidden">
-                                            <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 font-bold shrink-0">{s.title.charAt(0)}</div>
-                                            <div className="truncate"><h3 className="font-bold text-slate-800 dark:text-white truncate">{s.title}</h3><p className="text-xs text-slate-500 truncate">{s.artist || 'Desconocido'}</p></div>
+                                {TEACHER_TRACKS.map(t => (
+                                    <div key={t.id} onClick={() => { setCurrentSong(t); setView('player'); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 group transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 shadow-sm font-bold group-hover:text-indigo-600 group-hover:scale-110 transition-all">{t.id.replace('t','')}</div>
+                                            <div><h3 className="font-bold text-slate-800 dark:text-white">{t.title}</h3><p className="text-xs text-slate-500">{t.artist}</p></div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {s.hasAudio && <Icon name="music" size={14} className="text-indigo-400"/>}
-                                            <button onClick={(e) => deleteSong(s.id, e)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Icon name="trash" size={18}/></button>
-                                        </div>
+                                        <Icon name="play" className="text-slate-300 group-hover:text-indigo-600" size={20}/>
                                     </div>
                                 ))}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 relative">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold dark:text-white">Mi Biblioteca</h2>
+                                <button onClick={() => { setCurrentSong({}); setView('editor'); }} className="bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-brand-700 shadow-lg shadow-brand-500/30 active:scale-95 transition-all flex items-center gap-2"><Icon name="plus" size={16}/> Nueva</button>
+                            </div>
+                            {songs.length === 0 ? (
+                                <div className="text-center py-10 border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-2xl">
+                                    <p className="text-slate-400 text-sm mb-4">Añade tus propias canciones con letra y audio.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {songs.map(s => (
+                                        <div key={s.id} onClick={() => { setCurrentSong(s); setView('player'); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 group transition-all">
+                                            <div className="flex items-center gap-4 overflow-hidden">
+                                                <div className="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 font-bold shrink-0">{s.title.charAt(0)}</div>
+                                                <div className="truncate"><h3 className="font-bold text-slate-800 dark:text-white truncate">{s.title}</h3><p className="text-xs text-slate-500 truncate">{s.artist || 'Desconocido'}</p></div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {s.hasAudio && <Icon name="music" size={14} className="text-indigo-400"/>}
+                                                <button onClick={(e) => deleteSong(s.id, e)} className="p-2 text-slate-300 hover:text-red-500 transition-colors"><Icon name="trash" size={18}/></button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             );
         };
