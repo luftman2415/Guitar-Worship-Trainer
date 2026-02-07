@@ -6,18 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Guitar Worship Trainer Pro</title>
     
-    <!-- Favicon de emergencia para evitar 404 -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
-    
-    <!-- Evitar caché agresiva -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-
-    <!-- Scripts base -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script>
@@ -26,26 +17,23 @@
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        brand: {
-                            50: '#f0f4ff', 500: '#6366f1', 600: '#4f46e5',
-                        }
-                    }
+                    colors: { brand: { 50: '#f0f4ff', 500: '#6366f1', 600: '#4f46e5' } }
                 }
             }
         }
     </script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
+        body { -webkit-tap-highlight-color: transparent; background-color: #f8fafc; margin: 0; }
+        .dark body { background-color: #020617; }
         #root:empty::before {
-            content: "Iniciando sistema...";
+            content: "Iniciando sistema modular...";
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: sans-serif;
+            font-family: 'Inter', sans-serif;
             color: #6366f1;
-            font-weight: bold;
+            font-weight: 800;
         }
     </style>
 
@@ -65,42 +53,80 @@
 <body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300 antialiased">
     <div id="root"></div>
 
-    <!-- Cargador bypass para GitHub Pages (evita error de MIME Type) -->
-    <script type="text/babel" data-presets="react,typescript">
-        import React from 'react';
-        import ReactDOM from 'react-dom/client';
-        
-        // Cargamos el punto de entrada manualmente para asegurar que Babel lo procese
+    <script type="module">
+        // Mini-Bundler para entorno de navegador
+        const moduleCache = new Map();
+
+        async function loadAndTransform(url) {
+            const absoluteUrl = new URL(url, window.location.href).href;
+            if (moduleCache.has(absoluteUrl)) return moduleCache.get(absoluteUrl);
+
+            console.log(`📦 Procesando: ${url}`);
+            const response = await fetch(absoluteUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status} en ${url}`);
+            let code = await response.text();
+
+            // 1. Encontrar importaciones relativas
+            // Busca: from './path' o from "../path"
+            const importRegex = /from\s+['"](\.\.?\/[^'"]+)['"]/g;
+            const matches = [...code.matchAll(importRegex)];
+
+            for (const match of matches) {
+                const relativePath = match[1];
+                // Asegurar extensión si falta (común en TSX)
+                let fullRelativePath = relativePath;
+                if (!/\.(tsx?|js)$/.test(fullRelativePath)) {
+                    // Intenta adivinar la extensión (orden de prioridad)
+                    fullRelativePath += '.tsx'; 
+                }
+                
+                // Carga recursiva de la dependencia
+                const dependencyBlobUrl = await loadAndTransform(new URL(fullRelativePath, absoluteUrl).href);
+                // Reemplazar la ruta relativa por el Blob URL en el código
+                code = code.replace(match[0], `from '${dependencyBlobUrl}'`);
+            }
+
+            // 2. Transformar con Babel
+            const transformed = Babel.transform(code, {
+                presets: ['react', 'typescript'],
+                filename: absoluteUrl,
+                sourceMaps: 'inline'
+            }).code;
+
+            // 3. Crear el Blob ejecutable
+            const blob = new Blob([transformed], { type: 'text/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+            moduleCache.set(absoluteUrl, blobUrl);
+            return blobUrl;
+        }
+
         async function bootstrap() {
             try {
-                const response = await fetch('./index.tsx');
-                if (!response.ok) throw new Error('No se pudo cargar index.tsx');
-                const code = await response.text();
-                
-                // Transformar y ejecutar el código de index.tsx
-                const transformed = Babel.transform(code, {
-                    presets: ['react', 'typescript'],
-                    filename: 'index.tsx'
-                }).code;
-                
-                // Crear un blob para ejecutar como módulo
-                const blob = new Blob([transformed], { type: 'text/javascript' });
-                const url = URL.createObjectURL(blob);
-                await import(url);
+                // El punto de entrada es index.tsx
+                const entryPointBlob = await loadAndTransform('./index.tsx');
+                await import(entryPointBlob);
+                console.log("✅ Aplicación cargada exitosamente");
             } catch (err) {
-                console.error("Error al iniciar la app:", err);
-                document.getElementById('root').innerHTML = `<div style="padding: 20px; color: red;">Error crítico: ${err.message}. Revisa la consola.</div>`;
+                console.error("❌ Error crítico de carga:", err);
+                document.getElementById('root').innerHTML = `
+                    <div style="padding: 40px; font-family: sans-serif; text-align: center; color: #e11d48;">
+                        <h2 style="font-weight: 800;">Error de Módulos</h2>
+                        <p style="color: #64748b;">${err.message}</p>
+                        <p style="font-size: 12px; margin-top: 20px;">Revisa la consola para más detalles técnicos.</p>
+                        <button onclick="location.reload()" style="margin-top:20px; padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: bold;">Reintentar Carga Forzada</button>
+                    </div>
+                `;
             }
         }
-        
+
         bootstrap();
     </script>
 
     <script>
-        // Limpieza agresiva de Service Workers antiguos
+        // Limpieza de Service Workers antiguos para evitar conflictos de caché
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let reg of registrations) reg.unregister();
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                for(let r of regs) r.unregister();
             });
         }
     </script>
