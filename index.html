@@ -6,14 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Guitar Worship Trainer Pro</title>
     
-    <!-- Scripts base: Tailwind y Babel -->
+    <!-- Favicon de emergencia para evitar 404 -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    
+    <!-- Evitar caché agresiva -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <!-- Scripts base -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script>
-        // Configuración de Tailwind
         window.tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -21,9 +28,7 @@
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
                         brand: {
-                            50: '#f0f4ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
-                            400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-                            800: '#3730a3', 900: '#312e81',
+                            50: '#f0f4ff', 500: '#6366f1', 600: '#4f46e5',
                         }
                     }
                 }
@@ -31,22 +36,19 @@
         }
     </script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; user-select: none; background-color: #f8fafc; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body { -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
         #root:empty::before {
-            content: "Cargando aplicación...";
+            content: "Iniciando sistema...";
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: 'Inter', sans-serif;
-            font-weight: 800;
+            font-family: sans-serif;
             color: #6366f1;
+            font-weight: bold;
         }
     </style>
 
-    <!-- Mapa de importaciones para que el navegador sepa dónde están React y ReactDOM -->
     <script type="importmap">
 {
   "imports": {
@@ -60,23 +62,45 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 antialiased">
+<body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-300 antialiased">
     <div id="root"></div>
 
-    <!-- CARGA DE ARCHIVOS TSX -->
-    <!-- Importante: data-type="module" le dice a Babel que el resultado debe ser un módulo compatible -->
-    <script type="text/babel" data-type="module" data-presets="react,typescript" src="./index.tsx"></script>
+    <!-- Cargador bypass para GitHub Pages (evita error de MIME Type) -->
+    <script type="text/babel" data-presets="react,typescript">
+        import React from 'react';
+        import ReactDOM from 'react-dom/client';
+        
+        // Cargamos el punto de entrada manualmente para asegurar que Babel lo procese
+        async function bootstrap() {
+            try {
+                const response = await fetch('./index.tsx');
+                if (!response.ok) throw new Error('No se pudo cargar index.tsx');
+                const code = await response.text();
+                
+                // Transformar y ejecutar el código de index.tsx
+                const transformed = Babel.transform(code, {
+                    presets: ['react', 'typescript'],
+                    filename: 'index.tsx'
+                }).code;
+                
+                // Crear un blob para ejecutar como módulo
+                const blob = new Blob([transformed], { type: 'text/javascript' });
+                const url = URL.createObjectURL(blob);
+                await import(url);
+            } catch (err) {
+                console.error("Error al iniciar la app:", err);
+                document.getElementById('root').innerHTML = `<div style="padding: 20px; color: red;">Error crítico: ${err.message}. Revisa la consola.</div>`;
+            }
+        }
+        
+        bootstrap();
+    </script>
 
     <script>
-        // ELIMINACIÓN FORZADA DE SERVICE WORKERS ANTIGUOS
-        // Esto soluciona el error del index.css fantasma
+        // Limpieza agresiva de Service Workers antiguos
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister().then(() => {
-                        console.log("SW antiguo eliminado con éxito");
-                    });
-                }
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for(let reg of registrations) reg.unregister();
             });
         }
     </script>
