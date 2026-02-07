@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Guitar Worship Trainer Pro</title>
     
-    <!-- Scripts base -->
+    <!-- Scripts base: Tailwind y Babel -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
@@ -31,12 +31,22 @@
         }
     </script>
     <style>
-        body { -webkit-tap-highlight-color: transparent; user-select: none; }
+        body { -webkit-tap-highlight-color: transparent; user-select: none; background-color: #f8fafc; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+        #root:empty::before {
+            content: "Cargando aplicación...";
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            color: #6366f1;
+        }
     </style>
 
+    <!-- Mapa de importaciones para que el navegador sepa dónde están React y ReactDOM -->
     <script type="importmap">
 {
   "imports": {
@@ -53,22 +63,20 @@
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 antialiased">
     <div id="root"></div>
 
-    <!-- Babel procesará este archivo. Importante: type="text/babel" SIN data-type="module" para evitar errores de MIME en GitHub -->
-    <script type="text/babel" data-presets="react,typescript" src="./index.tsx"></script>
+    <!-- CARGA DE ARCHIVOS TSX -->
+    <!-- Importante: data-type="module" le dice a Babel que el resultado debe ser un módulo compatible -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="./index.tsx"></script>
 
     <script>
-        // Script para matar Service Workers antiguos y limpiar el error de index.css
+        // ELIMINACIÓN FORZADA DE SERVICE WORKERS ANTIGUOS
+        // Esto soluciona el error del index.css fantasma
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    registration.unregister();
+                    registration.unregister().then(() => {
+                        console.log("SW antiguo eliminado con éxito");
+                    });
                 }
-            });
-            
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Nuevo SW registrado'))
-                    .catch(err => console.log('Error registro SW:', err));
             });
         }
     </script>
