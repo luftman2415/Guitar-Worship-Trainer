@@ -1,0 +1,393 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Guitar Worship Trainer Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .animate-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .card-shadow { box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5); }
+        input[type="range"] { accent-color: #6366f1; }
+        .fretboard { background: #2a1f16; border-radius: 8px; position: relative; overflow-x: auto; }
+        .string { height: 2px; background: linear-gradient(to right, #888, #ddd, #888); width: 100%; position: absolute; }
+        .fret { border-right: 2px solid #555; position: absolute; height: 100%; top: 0; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-x-hidden">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+        // --- CONSTANTES ---
+        const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const TEACHER_TRACKS = [
+            { id: 't1', title: "La Sunamita", artist: "Montesanto", file: "La Sunamita.mp3", key: "Em" },
+            { id: 't2', title: "Hosanna", artist: "Marco Barrientos", file: "Hosanna.mp3", key: "G" },
+            { id: 't3', title: "Tus cuerdas de amor", artist: "Julio Melgar", file: "Tus cuerdas de amor.mp3", key: "G" },
+            { id: 't4', title: "La bondad de Dios", artist: "Bethel Music", file: "La bondad de Dios.mp3", key: "A" }
+        ];
+
+        // --- ICONOS ---
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const icons = {
+                home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>,
+                mic: <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2"/>,
+                music: <><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>,
+                activity: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>,
+                layers: <polygon points="12 2 2 7 12 12 22 7 12 2"/>,
+                repeat: <path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>,
+                grid: <rect x="3" y="3" width="7" height="7"/>,
+                zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+                ear: <path d="M12 2a10 10 0 0 0-10 10v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5"/>,
+                play: <polygon points="5 3 19 12 5 21 5 3"/>,
+                pause: <><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></>,
+                arrowLeft: <><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></>,
+                trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></>
+            };
+            return (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || <circle cx="12" cy="12" r="10"/>}
+                </svg>
+            );
+        };
+
+        // --- AUDIO ENGINE CORE ---
+        const AudioContextContext = createContext(null);
+        const useAudio = () => {
+            const ctxRef = useRef(null);
+            const getCtx = () => {
+                if(!ctxRef.current) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    ctxRef.current = new AudioContextClass();
+                }
+                return ctxRef.current;
+            };
+            return { getCtx };
+        };
+
+        // --- COMPONENTES DE SECCIÓN ---
+
+        const Tuner = () => {
+            const [note, setNote] = useState('--');
+            const [active, setActive] = useState(false);
+            const streamRef = useRef(null);
+            const intervalRef = useRef(null);
+
+            const start = async () => {
+                try {
+                    streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    setActive(true);
+                    intervalRef.current = setInterval(() => {
+                        setNote(NOTES[Math.floor(Math.random() * 12)]); // Simulación de pitch
+                    }, 500);
+                } catch(e) { alert("Micrófono requerido para afinar"); }
+            };
+
+            const stop = () => {
+                if(streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+                clearInterval(intervalRef.current);
+                setActive(false);
+                setNote('--');
+            };
+
+            return (
+                <div className="flex flex-col items-center p-12 bg-white/5 rounded-[4rem] border border-white/10 animate-in">
+                    <h2 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-12">Afinador de Precisión</h2>
+                    <div className="w-72 h-72 rounded-full border-[10px] border-slate-800 flex items-center justify-center bg-slate-900 shadow-2xl relative">
+                        <div className="absolute inset-0 rounded-full border-t-4 border-indigo-500/30 animate-pulse"></div>
+                        <span className="text-[10rem] font-black text-white leading-none">{note}</span>
+                    </div>
+                    <button onClick={active ? stop : start} className={`mt-12 px-16 py-6 rounded-3xl font-black uppercase tracking-widest shadow-2xl transition-all ${active ? 'bg-rose-500 scale-95' : 'bg-indigo-600 hover:scale-105'}`}>
+                        {active ? 'Detener' : 'Encender'}
+                    </button>
+                </div>
+            );
+        };
+
+        const Metronome = () => {
+            const [bpm, setBpm] = useState(120);
+            const [playing, setPlaying] = useState(false);
+            const [beat, setBeat] = useState(false);
+            const timerRef = useRef(null);
+
+            const toggle = () => {
+                if(playing) { clearInterval(timerRef.current); setPlaying(false); setBeat(false); }
+                else {
+                    setPlaying(true);
+                    timerRef.current = setInterval(() => {
+                        setBeat(true);
+                        setTimeout(() => setBeat(false), 100);
+                    }, (60000 / bpm));
+                }
+            };
+
+            return (
+                <div className="flex flex-col items-center p-12 bg-white/5 rounded-[4rem] border border-white/10 animate-in max-w-sm mx-auto text-center">
+                    <h2 className="text-sm font-black text-rose-400 uppercase tracking-widest mb-10">Metrónomo Maestro</h2>
+                    <div className={`w-40 h-40 rounded-full flex items-center justify-center transition-all duration-75 border-4 ${beat ? 'bg-rose-500 border-rose-300 scale-110 shadow-[0_0_40px_rgba(244,63,94,0.4)]' : 'bg-slate-800 border-slate-700'}`}>
+                        <span className="text-6xl font-black">{bpm}</span>
+                    </div>
+                    <input type="range" min="40" max="220" value={bpm} onChange={e => setBpm(e.target.value)} className="w-full h-2 mt-12 bg-slate-800 rounded-full appearance-none"/>
+                    <div className="grid grid-cols-2 gap-4 w-full mt-10">
+                        <button onClick={toggle} className={`py-6 rounded-3xl font-black uppercase tracking-widest shadow-2xl ${playing ? 'bg-rose-600' : 'bg-slate-800'}`}>
+                            {playing ? 'Stop' : 'Start'}
+                        </button>
+                        <button className="py-6 rounded-3xl bg-white/10 font-black uppercase tracking-widest">TAP</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const Pads = () => {
+            const [active, setActive] = useState(null);
+            return (
+                <div className="space-y-12 max-w-3xl mx-auto animate-in text-center">
+                    <div>
+                        <h2 className="text-4xl font-black mb-2 tracking-tighter">Worship Pads</h2>
+                        <p className="text-xs font-black text-blue-400 uppercase tracking-widest">Ambiente Espiritual Continuo</p>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                        {NOTES.map(n => (
+                            <button key={n} onClick={() => setActive(n)} className={`py-10 rounded-[2.5rem] font-black text-2xl border transition-all ${active === n ? 'bg-blue-600 border-blue-400 shadow-2xl scale-105' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                                {n}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="p-8 bg-white/5 rounded-[3rem] border border-white/10 flex items-center gap-6 justify-center">
+                        <Icon name={active ? "pause" : "play"} className="text-blue-500" />
+                        <div className="flex-1 max-w-xs text-left">
+                            <span className="text-[10px] font-black text-slate-500 uppercase mb-2 block">Volumen Pads</span>
+                            <input type="range" className="w-full h-2 bg-slate-800 rounded-full appearance-none"/>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const TrackList = ({ onSelect }) => (
+            <div className="space-y-6 max-w-4xl mx-auto animate-in">
+                <div className="flex justify-between items-end mb-10">
+                    <h2 className="text-5xl font-black tracking-tighter">Pistas de Clase</h2>
+                    <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest">{TEACHER_TRACKS.length} Canciones</span>
+                </div>
+                {TEACHER_TRACKS.map(t => (
+                    <div key={t.id} onClick={() => onSelect(t)} className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 flex justify-between items-center hover:bg-white/10 transition-all cursor-pointer group">
+                        <div className="flex items-center gap-8">
+                            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-500 rounded-3xl flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-all"><Icon name="music" size={30}/></div>
+                            <div>
+                                <h3 className="text-2xl font-black mb-1">{t.title}</h3>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t.artist}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-8">
+                            <div className="text-right hidden sm:block">
+                                <span className="block text-[10px] text-slate-500 font-black uppercase">Tonalidad</span>
+                                <span className="text-xl font-black text-emerald-500">{t.key}</span>
+                            </div>
+                            <button className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-xl group-hover:scale-110 transition-all"><Icon name="play" size={24}/></button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+
+        const RoutineViewer = () => (
+            <div className="max-w-4xl mx-auto space-y-8 animate-in">
+                <h2 className="text-4xl font-black tracking-tighter mb-8">Tu Rutina de Hoy</h2>
+                {[
+                    { cat: "Calentamiento", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", time: "5m" },
+                    { cat: "Técnica", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", time: "10m" },
+                    { cat: "Ritmo", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", time: "10m" },
+                    { cat: "Teoría", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", time: "15m" }
+                ].map((r, i) => (
+                    <div key={i} className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 flex justify-between items-center group">
+                        <div>
+                            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2 block">{r.cat}</span>
+                            <h3 className="text-2xl font-black mb-1">{r.name}</h3>
+                            <p className="text-sm text-slate-500 font-medium">{r.desc}</p>
+                        </div>
+                        <button className="px-8 py-4 bg-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl group-hover:scale-105 transition-all">Practicar</button>
+                    </div>
+                ))}
+            </div>
+        );
+
+        const ScaleStudio = () => (
+            <div className="space-y-12 max-w-5xl mx-auto animate-in">
+                <div className="flex justify-between items-end">
+                    <h2 className="text-4xl font-black tracking-tighter">Escalas Pro</h2>
+                    <select className="p-4 bg-slate-900 rounded-2xl border border-white/10 font-black text-xs uppercase tracking-widest">
+                        <option>Mayor (Jónica)</option>
+                        <option>Menor Pentatónica</option>
+                        <option>Dórica</option>
+                    </select>
+                </div>
+                <div className="fretboard h-64 p-4 flex flex-col justify-between border-4 border-slate-900 shadow-2xl relative overflow-x-auto">
+                    {[1, 2, 3, 4, 5, 6].map(s => (
+                        <div key={s} className="string opacity-40" style={{ top: `${(s-1) * 20 + 10}%` }}></div>
+                    ))}
+                    {[...Array(15)].map((_, i) => (
+                        <div key={i} className="fret" style={{ left: `${i * 6.6}%` }}>
+                            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[10px] font-black text-slate-600">{i}</span>
+                        </div>
+                    ))}
+                    <div className="absolute top-[30%] left-[6.6%] w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-xs font-black text-white shadow-xl shadow-emerald-500/40">G</div>
+                    <div className="absolute top-[70%] left-[20%] w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-xs font-black text-white shadow-xl shadow-indigo-500/40">C</div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {["I - Mayor", "ii - Menor", "iii - Menor", "IV - Mayor"].map((h, i) => (
+                        <div key={i} className="p-6 bg-white/5 rounded-3xl border border-white/10 text-center">
+                            <span className="text-[10px] font-black text-slate-500 uppercase block mb-2">Grado</span>
+                            <span className="text-xl font-black">{h}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // --- DASHBOARD PRINCIPAL ---
+
+        const Home = ({ setView }) => (
+            <div className="space-y-16 py-10 animate-in">
+                <header className="text-center space-y-6">
+                    <div className="inline-block px-8 py-2 bg-indigo-600 rounded-full text-[11px] font-black tracking-[0.4em] uppercase shadow-2xl">Academy Edition</div>
+                    <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-none">Worship<br/><span className="text-indigo-500">Coach</span></h1>
+                    <div className="flex justify-center gap-4 max-w-md mx-auto pt-6">
+                        <div className="flex-1 p-6 bg-white/5 rounded-3xl border border-white/10">
+                            <span className="block text-4xl font-black text-white">1</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Días Racha</span>
+                        </div>
+                        <div className="flex-1 p-6 bg-white/5 rounded-3xl border border-white/10">
+                            <span className="block text-4xl font-black text-white">8.4</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Minutos Totales</span>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                    <section className="space-y-6">
+                        <h3 className="text-xs font-black text-indigo-400 border-l-4 border-indigo-500 pl-4 uppercase tracking-widest">Vivo</h3>
+                        <Card title="Afinador" icon="mic" color="indigo" onClick={() => setView('tuner')}/>
+                        <Card title="Worship Pads" icon="layers" color="indigo" onClick={() => setView('pads')}/>
+                        <Card title="Jam Looper" icon="repeat" color="indigo" onClick={() => setView('looper')}/>
+                        <Card title="Metrónomo" icon="activity" color="indigo" onClick={() => setView('metronome')}/>
+                    </section>
+                    <section className="space-y-6">
+                        <h3 className="text-xs font-black text-pink-400 border-l-4 border-pink-500 pl-4 uppercase tracking-widest">Entrenamiento</h3>
+                        <Card title="Rutinas" icon="zap" color="pink" onClick={() => setView('routine')}/>
+                        <Card title="Oído Pro" icon="ear" color="pink" onClick={() => setView('ear')}/>
+                        <Card title="Grabadora" icon="mic" color="pink" onClick={() => setView('recorder')}/>
+                    </section>
+                    <section className="space-y-6">
+                        <h3 className="text-xs font-black text-emerald-400 border-l-4 border-emerald-500 pl-4 uppercase tracking-widest">Conocimiento</h3>
+                        <Card title="Escalas Pro" icon="grid" color="emerald" onClick={() => setView('scales')}/>
+                        <Card title="Teoría Hub" icon="zap" color="emerald" onClick={() => setView('theory')}/>
+                        <Card title="Cancionero" icon="music" color="emerald" onClick={() => setView('tracks')}/>
+                    </section>
+                </div>
+            </div>
+        );
+
+        const Card = ({ title, icon, color, onClick }) => (
+            <button onClick={onClick} className={`w-full p-8 rounded-[2.5rem] bg-white/5 border border-white/10 flex items-center gap-6 hover:bg-white/10 transition-all active:scale-95 shadow-xl group border-l-4 border-l-${color}-500`}>
+                <div className={`w-14 h-14 rounded-2xl bg-${color}-500/20 text-${color}-500 flex items-center justify-center transition-transform group-hover:scale-110`}><Icon name={icon}/></div>
+                <span className="text-xl font-black">{title}</span>
+            </button>
+        );
+
+        // --- APP ROOT ---
+
+        const App = () => {
+            const [view, setView] = useState('home');
+
+            const SidebarItem = ({ id, icon, label, color }) => (
+                <button onClick={() => setView(id)} className={`w-full flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${view === id ? `text-${color}-500 bg-${color}-500/10 shadow-lg` : 'text-slate-500 hover:text-white'}`}>
+                    <Icon name={icon} size={22} />
+                    <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+                </button>
+            );
+
+            return (
+                <div className="min-h-screen md:pl-24">
+                    {/* Barra Lateral Escritorio */}
+                    <nav className="hidden md:flex fixed left-0 top-0 h-full w-24 bg-slate-900/50 border-r border-white/5 flex-col items-center py-10 gap-3 z-50">
+                        <div onClick={() => setView('home')} className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-2xl mb-8 cursor-pointer">GW</div>
+                        <SidebarItem id="tuner" icon="mic" label="Afinar" color="indigo" />
+                        <SidebarItem id="pads" icon="layers" label="Pads" color="indigo" />
+                        <SidebarItem id="metronome" icon="activity" label="Tempo" color="indigo" />
+                        <SidebarItem id="looper" icon="repeat" label="Loop" color="indigo" />
+                        <div className="w-10 h-px bg-white/10 my-2"></div>
+                        <SidebarItem id="routine" icon="zap" label="Rutina" color="pink" />
+                        <SidebarItem id="ear" icon="ear" label="Oído" color="pink" />
+                        <SidebarItem id="recorder" icon="mic" label="Ideas" color="pink" />
+                        <div className="w-10 h-px bg-white/10 my-2"></div>
+                        <SidebarItem id="scales" icon="grid" label="Escalas" color="emerald" />
+                        <SidebarItem id="theory" icon="zap" label="Teoría" color="emerald" />
+                        <SidebarItem id="tracks" icon="music" label="Pistas" color="emerald" />
+                    </nav>
+
+                    <main className="max-w-6xl mx-auto p-6 md:p-12 pb-32">
+                        {view === 'home' && <Home setView={setView}/>}
+                        {view === 'tuner' && <Tuner/>}
+                        {view === 'metronome' && <Metronome/>}
+                        {view === 'pads' && <Pads/>}
+                        {view === 'tracks' && <TrackList onSelect={() => {}}/>}
+                        {view === 'routine' && <RoutineViewer/>}
+                        {view === 'scales' && <ScaleStudio/>}
+                        {/* Placeholders funcionales para el resto */}
+                        {['looper', 'recorder', 'ear', 'theory'].includes(view) && (
+                            <div className="py-20 text-center space-y-8 animate-in bg-white/5 rounded-[4rem] border border-white/10">
+                                <h2 className="text-6xl font-black uppercase tracking-tighter">Sección {view}</h2>
+                                <p className="text-slate-500 font-medium text-xl">Cargando motor de audio local...</p>
+                                <button onClick={() => setView('home')} className="px-12 py-5 bg-indigo-600 rounded-3xl font-black uppercase tracking-widest">Volver</button>
+                            </div>
+                        )}
+                        
+                        {view !== 'home' && (
+                            <button onClick={() => setView('home')} className="fixed bottom-10 left-1/2 -translate-x-1/2 px-10 py-5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full flex items-center gap-3 text-xs font-black uppercase tracking-widest hover:bg-white/20 transition-all shadow-2xl z-50">
+                                <Icon name="arrowLeft" size={16}/> Volver al Inicio
+                            </button>
+                        )}
+                    </main>
+
+                    <footer className="fixed bottom-0 left-0 w-full p-8 text-center text-[10px] font-bold text-slate-800 uppercase tracking-[0.5em] pointer-events-none">
+                        LUFTMANDMAURICIO © 2026
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+
+{
+  "name": "Guitar Worship Trainer Pro",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
