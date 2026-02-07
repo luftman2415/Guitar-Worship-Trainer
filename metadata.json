@@ -1,6 +1,6 @@
 {
   "name": "Guitar Worship Trainer Pro",
-  "description": "Herramienta integral para guitarristas: Afinador, Metrónomo, Setlists y Teoría Musical.",
+  "description": "A comprehensive local tool for guitarists, featuring a tuner, metronome, scale studio, worship pads, and track trainer with pitch detection and audio recording capabilities.",
   "requestFramePermissions": [
     "microphone"
   ]
