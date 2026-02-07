@@ -6,14 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Guitar Worship Trainer Pro</title>
     
-    <!-- Cargamos Tailwind y Babel Standalone -->
+    <!-- Scripts base -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script>
-        tailwind.config = {
+        // Configuración de Tailwind
+        window.tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
@@ -52,13 +53,22 @@
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 antialiased">
     <div id="root"></div>
 
-    <!-- USAMOS type="text/babel" para que Babel lo transforme y evitemos el error de MIME type de GitHub -->
-    <script type="text/babel" data-type="module" src="./index.tsx"></script>
+    <!-- Babel procesará este archivo. Importante: type="text/babel" SIN data-type="module" para evitar errores de MIME en GitHub -->
+    <script type="text/babel" data-presets="react,typescript" src="./index.tsx"></script>
 
     <script>
+        // Script para matar Service Workers antiguos y limpiar el error de index.css
         if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+            
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW reg error:', err));
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Nuevo SW registrado'))
+                    .catch(err => console.log('Error registro SW:', err));
             });
         }
     </script>
