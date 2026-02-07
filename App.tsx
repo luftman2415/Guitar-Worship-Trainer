@@ -13,25 +13,38 @@ import EarTrainer from './components/EarTrainer.tsx';
 import TheoryHub from './components/TheoryHub.tsx';
 import PracticeRoutine from './components/PracticeRoutine.tsx';
 
-export const useDialog = () => ({
-  alert: (args: { title: string; message: string }) => window.alert(`${args.title}\n\n${args.message}`),
-  confirm: (args: { title: string; message: string; onConfirm: () => void }) => {
-    if (window.confirm(`${args.title}\n\n${args.message}`)) args.onConfirm();
-  },
-  prompt: (args: { title: string; message: string; onConfirm: (val: string) => void }) => {
-    const res = window.prompt(`${args.title}\n\n${args.message}`);
-    if (res !== null) args.onConfirm(res);
-  }
-});
-
 const AudioContextContext = createContext<any>(null);
 export const useGlobalAudio = () => useContext(AudioContextContext);
+
+// Added DialogContext to handle global alerts, confirmations and prompts
+const DialogContext = createContext<any>(null);
+export const useDialog = () => useContext(DialogContext);
 
 const RootProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [padState, setPadState] = useState({ isPlaying: false, activeKey: null as string | null, volume: 0.4 });
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const oscillatorsRef = useRef<{ osc: OscillatorNode; gain: GainNode }[]>([]);
+
+  // Dialog state management
+  const [dialogConfig, setDialogConfig] = useState<any>(null);
+  const [promptValue, setPromptValue] = useState('');
+
+  const dialog = {
+    alert: (cfg: any) => setDialogConfig({ ...cfg, type: 'alert' }),
+    confirm: (cfg: any) => setDialogConfig({ ...cfg, type: 'confirm' }),
+    prompt: (cfg: any) => {
+      setPromptValue('');
+      setDialogConfig({ ...cfg, type: 'prompt' });
+    }
+  };
+
+  const handleDialogConfirm = () => {
+    if (dialogConfig?.onConfirm) {
+      dialogConfig.onConfirm(dialogConfig.type === 'prompt' ? promptValue : undefined);
+    }
+    setDialogConfig(null);
+  };
 
   const getCtx = useCallback(() => {
     if (!audioCtxRef.current) {
@@ -86,15 +99,36 @@ const RootProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     }
   }, [padState.isPlaying, padState.activeKey, stopPads, playPad]);
 
-  useEffect(() => {
-    if (masterGainRef.current && audioCtxRef.current) {
-      masterGainRef.current.gain.setTargetAtTime(padState.isPlaying ? padState.volume : 0, audioCtxRef.current.currentTime, 0.1);
-    }
-  }, [padState.volume, padState.isPlaying]);
-
   return (
     <AudioContextContext.Provider value={{ padState, setPadState, playPad, togglePad, getCtx }}>
-      {children}
+      <DialogContext.Provider value={dialog}>
+        {children}
+        {/* Render global dialog if configuration exists */}
+        {dialogConfig && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border border-slate-200 dark:border-slate-800 animate-in zoom-in-95">
+              <h3 className="text-xl font-black mb-2 dark:text-white tracking-tight">{dialogConfig.title}</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mb-6 leading-relaxed">{dialogConfig.message}</p>
+              
+              {dialogConfig.type === 'prompt' && (
+                <input 
+                  autoFocus
+                  value={promptValue}
+                  onChange={e => setPromptValue(e.target.value)}
+                  className="w-full p-4 mb-6 bg-slate-50 dark:bg-slate-800 rounded-2xl border dark:border-slate-700 dark:text-white font-bold"
+                />
+              )}
+              
+              <div className="flex gap-3">
+                {dialogConfig.type !== 'alert' && (
+                  <button onClick={() => setDialogConfig(null)} className="flex-1 py-4 rounded-2xl font-bold text-slate-400 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 transition-colors uppercase text-xs tracking-widest">Cancelar</button>
+                )}
+                <button onClick={handleDialogConfirm} className="flex-1 py-4 rounded-2xl font-black text-white bg-indigo-600 shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all uppercase text-xs tracking-widest">Aceptar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContext.Provider>
     </AudioContextContext.Provider>
   );
 };
@@ -107,18 +141,12 @@ const App: React.FC = () => {
     darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark');
   }, [darkMode]);
 
-  const NavItem = ({ id, icon, label, activeColor = 'performance' }: any) => {
+  const NavItem = ({ id, icon, label, colorClass }: any) => {
     const isActive = view === id;
-    const colors: Record<string, string> = {
-      performance: 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 ring-indigo-500/20',
-      training: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20 ring-pink-500/20',
-      study: 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 ring-emerald-500/20'
-    };
-
     return (
       <button 
         onClick={() => setView(id)} 
-        className={`w-full flex flex-col items-center gap-1 p-3 rounded-2xl transition-all duration-300 ${isActive ? `${colors[activeColor]} shadow-lg ring-1 scale-105` : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+        className={`w-full flex flex-col items-center gap-1 p-3 rounded-2xl transition-all duration-300 ${isActive ? `${colorClass} shadow-xl scale-110` : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
       >
         <Icon name={icon} size={24} />
         <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
@@ -129,34 +157,34 @@ const App: React.FC = () => {
   return (
     <RootProvider>
       <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
-        {/* Barra Lateral Pro */}
-        <nav className="hidden md:flex fixed left-0 top-0 h-screen w-32 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col py-8 items-center gap-2 z-50 overflow-y-auto no-scrollbar shadow-2xl">
-          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-3xl flex items-center justify-center text-white font-black text-3xl shadow-xl mb-6 cursor-pointer hover:rotate-6 transition-transform" onClick={() => setView('home')}>G</div>
+        {/* Barra Lateral Profesional */}
+        <nav className="hidden md:flex fixed left-0 top-0 h-screen w-32 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col py-8 items-center gap-2 z-50 shadow-2xl">
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-brand-600 rounded-3xl flex items-center justify-center text-white font-black text-3xl shadow-xl mb-6 cursor-pointer" onClick={() => setView('home')}>W</div>
           
-          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-4 mb-1">Live</p>
-          <NavItem id="tuner" icon="mic" label="Afin" activeColor="performance" />
-          <NavItem id="pads" icon="layers" label="Pads" activeColor="performance" />
-          <NavItem id="metronome" icon="activity" label="Metr" activeColor="performance" />
-          <NavItem id="looper" icon="repeat" label="Loop" activeColor="performance" />
-          
-          <div className="w-12 h-px bg-slate-200 dark:bg-slate-800 my-4"></div>
-          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Lab</p>
-          <NavItem id="ear" icon="ear" label="Oído" activeColor="training" />
-          <NavItem id="recorder" icon="mic" label="Capt" activeColor="training" />
-          <NavItem id="routine" icon="zap" label="Rut" activeColor="training" />
+          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mt-4 mb-2">Vivo</p>
+          <NavItem id="tuner" icon="mic" label="Afin" colorClass="text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" />
+          <NavItem id="pads" icon="layers" label="Pads" colorClass="text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" />
+          <NavItem id="metronome" icon="activity" label="Metr" colorClass="text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" />
+          <NavItem id="looper" icon="repeat" label="Loop" colorClass="text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20" />
           
           <div className="w-12 h-px bg-slate-200 dark:bg-slate-800 my-4"></div>
-          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1">Study</p>
-          <NavItem id="scales" icon="grid" label="Esca" activeColor="study" />
-          <NavItem id="analyze" icon="award" label="Teor" activeColor="study" />
-          <NavItem id="tracks" icon="music" label="Pist" activeColor="study" />
+          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-2">Lab</p>
+          <NavItem id="ear" icon="ear" label="Oído" colorClass="text-pink-500 bg-pink-50 dark:bg-pink-900/20" />
+          <NavItem id="recorder" icon="mic" label="Capt" colorClass="text-pink-500 bg-pink-50 dark:bg-pink-900/20" />
+          <NavItem id="routine" icon="zap" label="Rut" colorClass="text-pink-500 bg-pink-50 dark:bg-pink-900/20" />
           
-          <button onClick={() => setDarkMode(!darkMode)} className="mt-auto p-4 text-slate-400 hover:text-indigo-500 transition-colors bg-slate-50 dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <div className="w-12 h-px bg-slate-200 dark:bg-slate-800 my-4"></div>
+          <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-2">Estud</p>
+          <NavItem id="scales" icon="grid" label="Esca" colorClass="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" />
+          <NavItem id="analyze" icon="award" label="Teor" colorClass="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" />
+          <NavItem id="tracks" icon="music" label="Pist" colorClass="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" />
+          
+          <button onClick={() => setDarkMode(!darkMode)} className="mt-auto p-4 text-slate-400 hover:text-indigo-500 transition-colors">
             <Icon name={darkMode ? "sun" : "moon"} size={20} />
           </button>
         </nav>
 
-        <main className="flex-1 md:ml-32 p-6 md:p-12 pb-32">
+        <main className="flex-1 md:ml-32 p-6 md:p-12 pb-32 animate-fade-in">
           {view === 'home' && <Home setView={setView} />}
           {view === 'tuner' && <Tuner />}
           {view === 'tracks' && <TrackTrainer />}
@@ -171,12 +199,12 @@ const App: React.FC = () => {
         </main>
 
         {/* Móvil Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 w-full glass-nav border-t border-slate-200 dark:border-slate-800 p-2 flex justify-around z-50 overflow-x-auto no-scrollbar shadow-2xl">
-          <NavItem id="home" icon="home" label="Inic" />
-          <NavItem id="tuner" icon="mic" label="Afin" />
-          <NavItem id="pads" icon="layers" label="Pads" />
-          <NavItem id="tracks" icon="music" label="Pist" />
-          <NavItem id="scales" icon="grid" label="Esca" />
+        <nav className="md:hidden fixed bottom-0 left-0 w-full glass-nav border-t border-slate-200 dark:border-slate-800 p-2 flex justify-around z-50">
+          <NavItem id="home" icon="home" label="Inic" colorClass="text-indigo-500" />
+          <NavItem id="tuner" icon="mic" label="Afin" colorClass="text-indigo-500" />
+          <NavItem id="pads" icon="layers" label="Pads" colorClass="text-indigo-500" />
+          <NavItem id="tracks" icon="music" label="Pist" colorClass="text-emerald-500" />
+          <NavItem id="scales" icon="grid" label="Esca" colorClass="text-emerald-500" />
         </nav>
       </div>
     </RootProvider>
@@ -184,31 +212,31 @@ const App: React.FC = () => {
 };
 
 const Home = ({ setView }: any) => (
-  <div className="space-y-16 animate-in fade-in duration-1000 max-w-7xl mx-auto">
+  <div className="space-y-16 max-w-7xl mx-auto">
     <header className="text-center space-y-6">
-      <div className="inline-block px-8 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-full text-[11px] font-black uppercase tracking-[0.4em] mb-4 shadow-2xl shadow-indigo-500/20 ring-4 ring-indigo-500/10">Worship Studio Pro</div>
-      <h1 className="text-8xl md:text-9xl font-black tracking-tighter text-slate-800 dark:text-white leading-none">Guitar <span className="text-indigo-600 drop-shadow-2xl">Coach</span></h1>
-      <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.3em] text-xs max-w-xl mx-auto leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-6">Tu centro de entrenamiento definitivo para el ministerio</p>
+      <div className="inline-block px-8 py-3 bg-indigo-600 text-white rounded-full text-[11px] font-black uppercase tracking-[0.4em] mb-4 shadow-xl">Worship Guitar Academy</div>
+      <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-slate-800 dark:text-white leading-none">Guitar <span className="text-indigo-600">Coach</span></h1>
+      <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-[0.3em] text-xs max-w-xl mx-auto border-t border-slate-200 dark:border-slate-800 pt-6">Tu plataforma de entrenamiento para el ministerio</p>
     </header>
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-      <SectionGroup title="PERFORMANCE" subtitle="Manejo de Sonido y Tiempo" color="indigo">
-        <FeatureCard title="Afinador Pro" desc="Precisión Cromática" icon="mic" color="indigo" onClick={() => setView('tuner')} />
-        <FeatureCard title="Worship Pads" desc="Ambiente Celestial" icon="layers" color="violet" onClick={() => setView('pads')} />
-        <FeatureCard title="Jam Looper" desc="Borrado Instantáneo" icon="repeat" color="emerald" onClick={() => setView('looper')} />
-        <FeatureCard title="Metrónomo" desc="Beat Maestro" icon="activity" color="rose" onClick={() => setView('metronome')} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <SectionGroup title="PERFORMANCE" subtitle="Vivo y Sonido" color="indigo">
+        <FeatureCard title="Afinador Pro" desc="Cromático de precisión" icon="mic" color="indigo" onClick={() => setView('tuner')} />
+        <FeatureCard title="Worship Pads" desc="Ambiente espiritual" icon="layers" color="indigo" onClick={() => setView('pads')} />
+        <FeatureCard title="Jam Looper" desc="Crea tus bases" icon="repeat" color="indigo" onClick={() => setView('looper')} />
+        <FeatureCard title="Metrónomo" desc="Tempo maestro" icon="activity" color="indigo" onClick={() => setView('metronome')} />
       </SectionGroup>
 
-      <SectionGroup title="ENTRENAMIENTO" subtitle="Oído y Creatividad" color="pink">
-        <FeatureCard title="Ear Trainer" desc="Quiz de Intervalos" icon="ear" color="fuchsia" onClick={() => setView('ear')} />
-        <FeatureCard title="Capturador" desc="Graba tus Ideas" icon="mic" color="slate" onClick={() => setView('recorder')} />
-        <FeatureCard title="Rutinas" desc="Ensayo Guiado" icon="zap" color="amber" onClick={() => setView('routine')} />
+      <SectionGroup title="ENTRENAMIENTO" subtitle="Oído y Técnica" color="pink">
+        <FeatureCard title="Ear Trainer" desc="Quiz de intervalos" icon="ear" color="pink" onClick={() => setView('ear')} />
+        <FeatureCard title="Capturador" desc="Graba tus ideas" icon="mic" color="pink" onClick={() => setView('recorder')} />
+        <FeatureCard title="Rutinas" desc="Ensayo guiado" icon="zap" color="pink" onClick={() => setView('routine')} />
       </SectionGroup>
 
-      <SectionGroup title="ESTUDIO" subtitle="Teoría y Repertorio Real" color="emerald">
-        <FeatureCard title="Escalas Pro" desc="Mástil e Intervalos" icon="grid" color="brand" onClick={() => setView('scales')} />
-        <FeatureCard title="Teoría Hub" desc="Campo Armónico" icon="award" color="orange" onClick={() => setView('analyze')} />
-        <FeatureCard title="Cancionero" desc="7 Pistas de Clase" icon="music" color="sky" onClick={() => setView('tracks')} />
+      <SectionGroup title="ESTUDIO" subtitle="Teoría y Repertorio" color="emerald">
+        <FeatureCard title="Escalas Pro" desc="Mástil e intervalos" icon="grid" color="emerald" onClick={() => setView('scales')} />
+        <FeatureCard title="Teoría Hub" desc="Campo armónico" icon="award" color="emerald" onClick={() => setView('analyze')} />
+        <FeatureCard title="Cancionero" desc="7 Pistas de clase" icon="music" color="emerald" onClick={() => setView('tracks')} />
       </SectionGroup>
     </div>
   </div>
@@ -226,19 +254,27 @@ const SectionGroup = ({ title, subtitle, children, color }: any) => (
   </section>
 );
 
-const FeatureCard = ({ title, desc, icon, color, onClick }: any) => (
-  <div onClick={onClick} className={`group p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl cursor-pointer hover:border-${color}-500 hover:ring-8 hover:ring-${color}-500/5 hover:translate-y-[-4px] transition-all relative overflow-hidden`}>
-    <div className="flex items-center gap-6 relative z-10">
-      <div className={`w-16 h-16 bg-${color}-500/10 text-${color}-600 rounded-3xl flex items-center justify-center group-hover:scale-110 group-hover:bg-${color}-500 group-hover:text-white transition-all shadow-xl`}>
-        <Icon name={icon} />
+const FeatureCard = ({ title, desc, icon, color, onClick }: any) => {
+  const colorMap: any = {
+    indigo: 'hover:border-indigo-500 hover:ring-indigo-500/10 bg-indigo-500/5 text-indigo-600',
+    pink: 'hover:border-pink-500 hover:ring-pink-500/10 bg-pink-500/5 text-pink-600',
+    emerald: 'hover:border-emerald-500 hover:ring-emerald-500/10 bg-emerald-500/5 text-emerald-600'
+  };
+
+  return (
+    <div onClick={onClick} className={`group p-8 rounded-[2.5rem] bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 shadow-xl cursor-pointer hover:translate-y-[-4px] transition-all relative overflow-hidden ${colorMap[color].split(' ')[0]} ${colorMap[color].split(' ')[1]}`}>
+      <div className="flex items-center gap-6 relative z-10">
+        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-all shadow-lg ${colorMap[color].split(' ')[2]} ${colorMap[color].split(' ')[3]} group-hover:scale-110 group-hover:bg-current group-hover:text-white`}>
+          <Icon name={icon} />
+        </div>
+        <div>
+          <h3 className="text-xl font-black dark:text-white mb-1 tracking-tighter">{title}</h3>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 dark:group-hover:text-slate-300">{desc}</p>
+        </div>
       </div>
-      <div>
-        <h3 className="text-xl font-black dark:text-white mb-1 tracking-tighter">{title}</h3>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-600 dark:group-hover:text-slate-300">{desc}</p>
-      </div>
+      <div className={`absolute -bottom-12 -right-12 w-32 h-32 opacity-5 rounded-full scale-150 group-hover:scale-[4] transition-transform duration-700 bg-current`}></div>
     </div>
-    <div className={`absolute -bottom-12 -right-12 w-32 h-32 bg-${color}-500/5 rounded-full scale-150 group-hover:scale-[4] transition-transform duration-700`}></div>
-  </div>
-);
+  );
+};
 
 export default App;

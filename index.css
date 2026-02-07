@@ -1,0 +1,65 @@
+
+/* Estilos Globales para Guitar Worship Trainer */
+:root {
+    --brand-color: #6366f1;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+/* Scrollbars personalizados */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Estilos de navegación Glassmorphism */
+.glass-nav {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-nav {
+    background: rgba(15, 23, 42, 0.8);
+}
+
+/* Eliminar scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

@@ -24,28 +24,26 @@ export const CHORD_FORMULAS = [
   { name: "Dom7", formula: "1 - 3 - 5 - b7", example: "C - E - G - Bb" },
   { name: "Sus2", formula: "1 - 2 - 5", example: "C - D - G" },
   { name: "Sus4", formula: "1 - 4 - 5", example: "C - F - G" },
-  { name: "Add9", formula: "1 - 3 - 5 - 9", example: "C - E - G - D" },
-  { name: "9na", formula: "1 - 3 - 5 - b7 - 9", example: "C - E - G - Bb - D" },
-  { name: "11na", formula: "1 - 5 - b7 - 9 - 11", example: "C - G - Bb - D - F" },
-  { name: "13na", formula: "1 - 3 - 5 - b7 - 9 - 13", example: "C - E - G - Bb - D - A" },
-  { name: "Dim", formula: "1 - b3 - b5", example: "C - Eb - Gb" },
-  { name: "Aug", formula: "1 - 3 - #5", example: "C - E - G#" }
+  { name: "Add9", formula: "1 - 3 - 5 - 9", example: "C - E - G - D" }
 ];
 
 export const TEACHER_TRACKS = [
   { id: 't1', title: "Hosanna", artist: "Marco Barrientos", key: "G", bpm: 120, isTeacher: true },
-  { id: 't2', title: "La bondad de Dios", artist: "Bethel / Church of the City", key: "A", bpm: 72, isTeacher: true },
+  { id: 't2', title: "La bondad de Dios", artist: "Bethel Music", key: "A", bpm: 72, isTeacher: true },
   { id: 't3', title: "La Sunamita", artist: "Montesanto", key: "Em", bpm: 128, isTeacher: true },
   { id: 't4', title: "Tus cuerdas de amor", artist: "Julio Melgar", key: "G", bpm: 74, isTeacher: true },
-  { id: 't5', title: "Hermoso Nombre", artist: "Hillsong", key: "D", bpm: 68, isTeacher: true },
-  { id: 't6', title: "Way Maker", artist: "Sinach", key: "E", bpm: 64, isTeacher: true },
+  { id: 't5', title: "Hermoso Nombre", artist: "Hillsong Worship", key: "D", bpm: 68, isTeacher: true },
+  { id: 't6', title: "Way Maker", artist: "Sinach / Priscilla Bueno", key: "E", bpm: 64, isTeacher: true },
   { id: 't7', title: "Rey de Reyes", artist: "Miel San Marcos", key: "B", bpm: 76, isTeacher: true }
 ];
 
+// Added missing EXERCISES for PracticeRoutine.tsx
 export const EXERCISES = [
-  { id: 1, category: "CALENTAMIENTO", name: "Spider Walk", desc: "1-2-3-4 en todas las cuerdas.", defaultTime: 5 },
-  { id: 2, category: "TÉCNICA", name: "Bending / Vibrato", desc: "Control de tono y expresión.", defaultTime: 10 },
-  { id: 3, category: "REPERTORIO", name: "Setlist Clase", desc: "Repaso de las 7 pistas.", defaultTime: 15 }
+  { id: 'e1', name: "Escalas Cromáticas", desc: "Coordinación dedo por dedo en todo el mástil.", category: "Técnica", defaultTime: 5 },
+  { id: 'e2', name: "Arpegios Maj7", desc: "Saltos de cuerda y extensión de dedos.", category: "Armonía", defaultTime: 10 },
+  { id: 'e3', name: "Rítmica Worship", desc: "Patrones de rasgueo 4/4 con acentos.", category: "Ritmo", defaultTime: 15 },
+  { id: 'e4', name: "Independencia", desc: "Dedos 1-3 y 2-4 alternados.", category: "Técnica", defaultTime: 5 },
+  { id: 'e5', name: "Ciclo de 4tas", desc: "Encuentra la tónica en todas las posiciones.", category: "Teoría", defaultTime: 10 }
 ];
 
 export const Icon = ({ name, size = 24, className = "", fill = "none" }: any) => {
@@ -64,17 +62,15 @@ export const Icon = ({ name, size = 24, className = "", fill = "none" }: any) =>
     pause: <><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></>,
     arrowLeft: <line x1="19" y1="12" x2="5" y2="12"></line>,
     trash: <polyline points="3 6 5 6 21 6"></polyline>,
-    award: <circle cx="12" cy="8" r="7"></circle>,
-    clock: <circle cx="12" cy="12" r="10"></circle>,
-    ear: <path d="M12 2a10 10 0 0 0-10 10v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5"></path>,
-    minus: <line x1="5" y1="12" x2="19" y2="12"></line>,
-    plus: <><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></>,
-    x: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
-    micOff: <><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></>,
-    stop: <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>,
-    edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></>,
     check: <polyline points="20 6 9 17 4 12"></polyline>,
-    settings: <circle cx="12" cy="12" r="3"></circle>
+    ear: <path d="M12 2a10 10 0 0 0-10 10v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5"></path>,
+    award: <circle cx="12" cy="8" r="7"></circle>,
+    x: <><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></>,
+    minus: <line x1="5" y1="12" x2="19" y2="12"></line>,
+    stop: <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>,
+    edit: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>,
+    micOff: <><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path></>,
   };
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

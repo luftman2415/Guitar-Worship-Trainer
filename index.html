@@ -5,8 +5,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Guitar Worship Trainer Pro</title>
+    
+    <!-- Scripts de Estilo y Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- TRADUCTOR PARA EL NAVEGADOR (Babel) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -15,22 +21,15 @@
                     fontFamily: { sans: ['Montserrat', 'sans-serif'] },
                     colors: { 
                         brand: { 50: '#f0f4ff', 500: '#6366f1', 600: '#4f46e5' },
-                        performance: '#6366f1',
-                        training: '#ec4899',
-                        study: '#10b981'
                     }
                 }
             }
         }
     </script>
-    <style>
-        body { -webkit-tap-highlight-color: transparent; margin: 0; scroll-behavior: smooth; overflow-x: hidden; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); }
-        .dark .glass-nav { background: rgba(15, 23, 42, 0.9); }
-        .sidebar-active { box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.4); }
-    </style>
+
+    <link rel="stylesheet" href="./index.css">
+
+    <!-- Import Map para React 19 -->
     <script type="importmap">
 {
   "imports": {
@@ -46,7 +45,8 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 antialiased">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <!-- Cargamos como módulo y le decimos a Babel que lo procese -->
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
 </html>
