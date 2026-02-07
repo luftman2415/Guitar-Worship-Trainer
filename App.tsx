@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
-import { AppView, PracticeStats, ChordData, Song } from './types';
-import { Icon } from './constants';
-import Tuner from './components/Tuner';
-import Metronome from './components/Metronome';
-import ScaleStudio from './components/ScaleStudio';
-import PadPlayer from './components/PadPlayer';
-import TrackTrainer from './components/TrackTrainer';
-import IdeaRecorder from './components/IdeaRecorder';
-import JamLooper from './components/JamLooper';
-import EarTrainer from './components/EarTrainer';
-import TheoryHub from './components/TheoryHub';
-import PracticeRoutine from './components/PracticeRoutine';
+import { AppView, PracticeStats, ChordData, Song } from './types.ts';
+import { Icon } from './constants.tsx';
+import Tuner from './components/Tuner.tsx';
+import Metronome from './components/Metronome.tsx';
+import ScaleStudio from './components/ScaleStudio.tsx';
+import PadPlayer from './components/PadPlayer.tsx';
+import TrackTrainer from './components/TrackTrainer.tsx';
+import IdeaRecorder from './components/IdeaRecorder.tsx';
+import JamLooper from './components/JamLooper.tsx';
+import EarTrainer from './components/EarTrainer.tsx';
+import TheoryHub from './components/TheoryHub.tsx';
+import PracticeRoutine from './components/PracticeRoutine.tsx';
 
 // --- PERSISTENT AUDIO ENGINE CONTEXT ---
 const AudioContextContext = createContext<any>(null);
