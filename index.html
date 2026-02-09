@@ -294,30 +294,36 @@
              const [showInstall, setShowInstall] = useState(false);
              const padEngine = usePadEngine();
          
-             useEffect(() => {
-                 if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setDarkMode(true);
-                 const handleStorage = () => setUpdateTrigger(p => p + 1);
-                 const handleStatsUpdate = () => setUpdateTrigger(p => p + 1);
-                 window.addEventListener('storage', handleStorage);
-                 window.addEventListener('gwt-stats-updated', handleStatsUpdate);
-                 const handleInstallPrompt = (e) => { e.preventDefault(); setDeferredPrompt(e); setShowInstall(true); };
-                 window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-                 return () => { window.removeEventListener('storage', handleStorage); window.removeEventListener('gwt-stats-updated', handleStatsUpdate); window.removeEventListener('beforeinstallprompt', handleInstallPrompt); };
-             }, []);
-         
-             useEffect(() => { darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark'); }, [darkMode]);
+             // --- EFECTO: MANTENER PANTALLA ENCENDIDA ---
+            useEffect(() => {
+                const keepAwake = async () => {
+                    try {
+                        if ('wakeLock' in navigator) {
+                            await navigator.wakeLock.request('screen');
+                            console.log("Pantalla bloqueada para no apagarse");
+                        }
+                    } catch (err) { console.log("Wake Lock no soportado o bloqueado", err); }
+                };
+                // Intentamos activar al cargar y al primer toque (por seguridad del navegador)
+                keepAwake();
+                window.addEventListener('click', keepAwake, { once: true });
+                window.addEventListener('touchstart', keepAwake, { once: true });
+            }, []);
          
              const installApp = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { setDeferredPrompt(null); setShowInstall(false); } };
              // Función NavItem mejorada con scroll automático y color activo sólido
             // NavItem CORREGIDO: Ya no salta al inicio
-            	const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { 
+            	// NavItem CON VIBRACIÓN TÁCTIL
+            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { 
                 const active = view === id;
                 
                 const handleClick = () => {
+                    // Vibración suave (15ms) si el dispositivo lo soporta
+                    if (navigator.vibrate) navigator.vibrate(15);
+
                     if (onClick) onClick();
                     else {
                         setView(id);
-                        // window.scrollTo({ top: 0, behavior: 'smooth' }); // Comentado para que no salte
                     }
                 };
 
