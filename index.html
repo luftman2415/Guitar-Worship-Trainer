@@ -234,29 +234,49 @@
             return (<div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"><div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl animate-modal border border-slate-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto"><h3 className="text-lg font-bold mb-4 dark:text-white">Constructor de Acordes</h3><input value={name} onChange={e => setName(e.target.value)} className="w-full p-3 mb-4 bg-slate-100 dark:bg-slate-700 rounded-xl border dark:border-slate-600 dark:text-white font-bold text-center text-lg" placeholder="Nombre (Ej: Gadd9)"/><div className="relative w-[200px] h-[240px] mx-auto bg-white dark:bg-slate-900 border-2 border-slate-800 dark:border-slate-600 rounded select-none mb-4 shadow-inner">{[1,2,3,4].map(i => <div key={i} className="absolute w-full h-[1px] bg-slate-300 dark:bg-slate-600" style={{ top: `${i * 20}%` }}></div>)}{[0,1,2,3,4,5].map(i => <div key={i} className="absolute h-full w-[1px] bg-slate-800 dark:bg-slate-500" style={{ left: `${10 + i * 16}%` }}></div>)}<div className="absolute -top-6 w-full flex justify-between px-[10%]">{[0,1,2,3,4,5].map(s => (<div key={s} onClick={() => toggleStringState(s)} className="cursor-pointer w-6 text-center text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white" style={{ position: 'absolute', left: `${10 + s * 16}%`, transform: 'translateX(-50%)' }}>{muted[s] ? 'X' : (dots.some(d => d.string === s) ? '' : 'O')}</div>))}</div>{[0,1,2,3,4].map(fret => (<div key={fret} className="absolute w-full h-[20%]" style={{ top: `${fret * 20}%` }}>{[0,1,2,3,4,5].map(str => { const dot = dots.find(d => d.string === str && d.fret === fret + 1); return (<div key={str} onClick={() => handleFretClick(str, fret + 1)} className="absolute w-[16%] h-full cursor-pointer flex items-center justify-center" style={{ left: `${10 + str * 16}%`, transform: 'translateX(-50%)' }}>{dot && (<div className={`w-4 h-4 rounded-full shadow-sm z-10 ${dot.type === 'root' ? 'bg-green-500 ring-2 ring-green-200' : 'bg-slate-800 dark:bg-white'}`}></div>)}</div>) })}</div>))}</div><p className="text-center text-xs text-slate-400 mb-6 italic px-4">Tip: Haz <span className="font-bold text-green-500">doble clic</span> sobre un punto para marcarlo como la nota tónica (referencia).</p><div className="flex items-center gap-2 mb-6 justify-center"><input type="checkbox" id="saveGlobal" checked={saveGlobal} onChange={e => setSaveGlobal(e.target.checked)} className="w-4 h-4 accent-cyan-600 rounded"/><label htmlFor="saveGlobal" className="text-xs text-slate-600 dark:text-slate-300 font-bold select-none cursor-pointer">Guardar en Biblioteca Global</label></div><div className="flex gap-2"><button onClick={handleSave} className="flex-1 bg-cyan-600 text-white py-2 rounded-xl font-bold hover:bg-cyan-700">Guardar</button><button onClick={onCancel} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-500 font-bold rounded-xl">Cancelar</button></div></div></div>);
         };
 
-        const ChordDisplay = ({ chord, size = "small", onClick }) => {
+const ChordDisplay = ({ chord, size = "small", onClick }) => {
             if (!chord) return null;
             let scale = 0.5;
             if (size === "medium") { scale = 0.8; }
             if (size === "large") { scale = 2.8; }
 
+            const baseFret = chord.baseFret || 1;
+
             return (
                 <div onClick={onClick} className={`flex flex-col items-center mx-2 mb-2 ${onClick ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}>
-                    <div className="relative bg-white dark:bg-slate-900 border border-slate-800 dark:border-slate-500 rounded-sm shadow-sm" style={{ width: `${80 * scale}px`, height: `${100 * scale}px` }}>
+                    <div className={`relative bg-white dark:bg-slate-900 border-x-2 border-b-2 border-slate-800 dark:border-slate-500 rounded-b-sm shadow-sm mt-4 ${baseFret === 1 ? 'border-t-[4px] border-t-slate-800 dark:border-t-slate-500' : 'border-t-2 border-t-slate-800 dark:border-t-slate-500'}`} style={{ width: `${80 * scale}px`, height: `${100 * scale}px` }}>
                             {/* Cuerdas */}
                             {[1,2,3,4].map(i => <div key={i} className="absolute w-full h-[1px] bg-slate-300 dark:bg-slate-600" style={{ top: `${i * 20}%` }}></div>)}
                             {[0,1,2,3,4,5].map(i => <div key={i} className="absolute h-full w-[1px] bg-slate-800 dark:bg-slate-500" style={{ left: `${10 + i * 16}%` }}></div>)}
                             
-                            {/* Puntos (Notas) */}
-                            {chord.dots.map((d, i) => (<div key={i} className={`absolute rounded-full ${d.type === 'root' ? 'bg-red-500' : 'bg-slate-800 dark:bg-white'}`} style={{ left: `${10 + d.string * 16}%`, top: `${(d.fret - 1) * 20 + 10}%`, transform: 'translate(-50%, -50%)', width: `${14 * scale}px`, height: `${14 * scale}px`, boxShadow: '0 1px 2px rgba(0,0,0,0.3)', zIndex: 10 }}></div>))}
+                            {/* Base Fret Indicator */}
+                            {baseFret > 1 && <div className="absolute font-bold text-slate-500" style={{ left: `-${24 * scale}px`, top: `${5 * scale}px`, fontSize: `${12 * scale}px` }}>{baseFret}fr</div>}
+
+                            {/* Puntos (Notas) y Cuerdas al aire */}
+                            {chord.dots.map((d, i) => {
+                                const isO = d.fret === 0;
+                                return (
+                                <div key={i} className={`absolute rounded-full flex items-center justify-center ${d.type === 'root' ? (isO ? 'border-2 border-red-500' : 'bg-red-500') : (isO ? 'border-2 border-slate-800 dark:border-white' : 'bg-slate-800 dark:bg-white')}`} 
+                                     style={{ 
+                                         left: `${10 + d.string * 16}%`, 
+                                         top: isO ? `-${10 * scale}px` : `${(d.fret - 1) * 20 + 10}%`, 
+                                         transform: 'translate(-50%, -50%)', 
+                                         width: `${isO ? 10 * scale : 14 * scale}px`, 
+                                         height: `${isO ? 10 * scale : 14 * scale}px`, 
+                                         boxShadow: isO ? 'none' : '0 1px 2px rgba(0,0,0,0.3)', 
+                                         zIndex: 10,
+                                         backgroundColor: isO ? 'transparent' : ''
+                                     }}>
+                                </div>
+                            )})}
                             
-                            {/* Muted Strings (X) - MEJORADO: Más pequeño y sutil */}
-                            {chord.muted.map((m, s) => (m && <div key={s} className="absolute -top-[15%] font-bold text-slate-400 dark:text-slate-500" style={{ left: `${10 + s * 16}%`, transform: 'translateX(-50%)', fontSize: `${10 * scale}px` }}>X</div>))}
+                            {/* Muted Strings (X) */}
+                            {chord.muted.map((m, s) => (m && <div key={s} className="absolute font-bold text-slate-400 dark:text-slate-500" style={{ left: `${10 + s * 16}%`, top: `-${12 * scale}px`, transform: 'translate(-50%, -50%)', fontSize: `${12 * scale}px` }}>X</div>))}
                     </div>
                     <span className={`font-black mt-2 dark:text-white truncate text-center ${size==='large' ? 'text-2xl mt-4' : 'text-[10px]'}`}>{chord.name}</span>
                 </div>
             );
-        };
+        };        
 
         // --- TRACK TRAINER (REPRODUCTOR Y SONGS) ---
         const TrackTrainer = () => {
@@ -405,20 +425,210 @@
             );
         };
 
-        const TheoryHub = () => { 
-            const [activeTool, setActiveTool] = useState('circle'); 
+// --- NUEVO SISTEMA DE DICCIONARIO AVANZADO (CAGED DINÁMICO) ---
+        const CHORD_SYSTEM = {
+            'Mayor': [
+                { rs: 0, frets:[0, 2, 2, 1, 0, 0] }, // E shape
+                { rs: 1, frets: ['x', 0, 2, 2, 2, 0] }, // A shape
+                { rs: 2, frets:['x', 'x', 0, 2, 3, 2] }, // D shape
+                { rs: 1, frets:['x', 0, -1, -3, -2, -3] }, // C shape
+                { rs: 0, frets: [0, -1, -3, -3, -3, 0] } // G shape
+            ],
+            'Menor': [
+                { rs: 0, frets:[0, 2, 2, 0, 0, 0] }, // Em
+                { rs: 1, frets: ['x', 0, 2, 2, 1, 0] }, // Am
+                { rs: 2, frets:['x', 'x', 0, 2, 3, 1] } // Dm
+            ],
+            '7':[
+                { rs: 0, frets:[0, 2, 0, 1, 3, 0] }, // E7
+                { rs: 1, frets:['x', 0, 2, 0, 2, 0] }, // A7
+                { rs: 2, frets: ['x', 'x', 0, 2, 1, 2] }, // D7
+                { rs: 1, frets:['x', 0, -1, -3, -2, 0] }, // C7
+                { rs: 0, frets:[0, -1, -3, -3, -3, -2] } // G7
+            ],
+            'm7': [
+                { rs: 0, frets:[0, 2, 0, 0, 0, 0] }, // Em7
+                { rs: 1, frets: ['x', 0, 2, 0, 1, 0] }, // Am7
+                { rs: 2, frets:['x', 'x', 0, 2, 1, 1] } // Dm7
+            ],
+            'Maj7':[
+                { rs: 0, frets: [0, 2, 1, 1, 0, 0] }, // EMaj7
+                { rs: 1, frets:['x', 0, 2, 1, 2, 0] }, // AMaj7
+                { rs: 2, frets: ['x', 'x', 0, 2, 2, 2] }, // DMaj7
+                { rs: 1, frets:['x', 0, -1, -3, -3, -3] } // CMaj7
+            ],
+            'sus4':[
+                { rs: 0, frets:[0, 2, 2, 2, 0, 0] }, // Esus4
+                { rs: 1, frets:['x', 0, 2, 2, 3, 0] }, // Asus4
+                { rs: 2, frets: ['x', 'x', 0, 2, 3, 3] }, // Dsus4
+                { rs: 1, frets:['x', 0, 0, -3, -2, -2] } // Csus4
+            ],
+            'sus2':[
+                { rs: 1, frets:['x', 0, 2, 2, 0, 0] }, // Asus2
+                { rs: 2, frets:['x', 'x', 0, 2, 3, 0] }, // Dsus2
+                { rs: 1, frets: ['x', 0, -3, -3, -2, -3] }, // Csus2
+                { rs: 0, frets:[0, 2, 4, 4, 0, 0] } // Esus2
+            ],
+            'add9':[
+                { rs: 1, frets:['x', 0, -1, -3, 0, 0] }, // Cadd9 (X 3 2 0 3 3)
+                { rs: 0, frets:[0, -1, -3, -1, -3, 0] }, // Gadd9 (3 2 0 2 0 3)
+                { rs: 0, frets: [0, 2, 4, 1, 0, 0] }, // Eadd9
+                { rs: 1, frets:['x', 0, 2, 4, 2, 0] } // Aadd9
+            ],
+            'dim':[
+                { rs: 0, frets:[0, 1, 2, 0, 'x', 'x'] },
+                { rs: 1, frets:['x', 0, 1, 2, 1, 'x'] },
+                { rs: 2, frets:['x', 'x', 0, 1, 3, 1] }
+            ],
+            'aug': [
+                { rs: 0, frets:[0, 3, 2, 1, 1, 0] },
+                { rs: 1, frets:['x', 0, 3, 2, 2, 1] },
+                { rs: 2, frets: ['x', 'x', 0, 3, 3, 2] }
+            ]
+        };
+
+        const ChordDictionary = () => {
+            const [selectedRoot, setSelectedRoot] = useState('C');
+            const [selectedType, setSelectedType] = useState('Mayor');
+            const TYPES =['Mayor', 'Menor', '7', 'm7', 'Maj7', 'sus4', 'sus2', 'add9', 'dim', 'aug'];
+            
+            // Índices de cuerdas al aire (E, A, D, G, B, e)
+            const OPEN_NOTES =[4, 9, 2, 7, 11, 4]; 
+
+      const getChords = () => {
+                const rootIndex = NOTES.indexOf(selectedRoot);
+                const shapes = CHORD_SYSTEM[selectedType] ||[];
+                const generated = new Array();
+                const seen = new Set();
+                
+                shapes.forEach(shape => {
+                    const openNote = OPEN_NOTES[shape.rs];
+                    const rootFret = (rootIndex - openNote + 12) % 12;
+
+                    [rootFret, rootFret + 12].forEach(rf => {
+                        if (rf > 14) return;
+
+                        let isValid = true;
+                        const actualFrets = new Array();
+                        const muted = [false, false, false, false, false, false];
+                        
+                        shape.frets.forEach((offset, sIdx) => {
+                            if (offset === 'x') {
+                                muted[sIdx] = true;
+                                actualFrets.push(-1);
+                            } else {
+                                const fret = rf + offset;
+                                if (fret < 0 || fret > 17) isValid = false;
+                                actualFrets.push(fret);
+                            }
+                        });
+
+                        if (!isValid) return;
+
+                        const frettedOnly = actualFrets.filter(f => f > 0);
+                        if (frettedOnly.length > 0) {
+                            const minFret = Math.min(...frettedOnly);
+                            const maxFret = Math.max(...frettedOnly);
+                            if (maxFret - minFret > 4) return; 
+                        }
+
+                        const fretString = actualFrets.join(',');
+                        if (seen.has(fretString)) return;
+                        seen.add(fretString);
+
+                        let baseFret = frettedOnly.length > 0 ? Math.min(...frettedOnly) : 1;
+                        if (actualFrets.some(f => f === 0) || baseFret === 0) {
+                            baseFret = 1;
+                        }
+
+                        // Usamos otra variable para evitar el corte del chat
+                        let puntosAcorde = new Array();
+                        
+                        actualFrets.forEach((fret, sIdx) => {
+                            if (fret >= 0) {
+                                const isRoot = (sIdx === shape.rs && fret === rf);
+                                puntosAcorde.push({
+                                    string: sIdx,
+                                    fret: fret === 0 ? 0 : (fret - baseFret + 1),
+                                    type: isRoot ? 'root' : 'note'
+                                });
+                            }
+                        });
+
+                        generated.push({
+                            name: `${selectedRoot}${selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}`,
+                            muted: muted,
+                            baseFret: baseFret,
+                            dots: puntosAcorde,
+                            sortScore: baseFret + (actualFrets.includes(0) ? -10 : 0) 
+                        });
+                    });
+                });
+
+                return generated.sort((a, b) => a.sortScore - b.sortScore).slice(0, 4);
+            };
+
+            const voicings = getChords();
+
             return (
-                <div className="max-w-4xl mx-auto">
+                <div className="animate-fade-in text-center max-w-2xl mx-auto">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 mb-6">
+                        <div className="flex flex-col gap-6 mb-2">
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Nota Raíz</label>
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                    {NOTES.map(n => (
+                                        <button key={n} onClick={() => setSelectedRoot(n)} className={`w-10 h-10 rounded-xl font-bold transition-all ${selectedRoot === n ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30 scale-110' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{n}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="h-px w-full bg-slate-100 dark:bg-slate-700"></div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Tipo de Acorde</label>
+                                <div className="flex flex-wrap gap-2 justify-center">
+                                    {TYPES.map(t => (
+                                        <button key={t} onClick={() => setSelectedType(t)} className={`px-4 py-2 rounded-xl font-bold transition-all text-sm ${selectedType === t ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{t === 'Mayor' ? 'May' : t === 'Menor' ? 'm' : t}</button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
+                        <h3 className="text-lg font-bold mb-6 dark:text-white">Posiciones: <span className="text-brand-600">{selectedRoot}{selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}</span></h3>
+                        {voicings.length > 0 ? (
+                            <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
+                                {voicings.map((v, i) => (
+                                    <div key={i} className="flex flex-col items-center">
+                                        <ChordDisplay chord={v} size="medium" />
+                                        <span className="text-xs text-slate-400 mt-4 font-bold bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">Posición {i + 1}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-500">No hay posiciones disponibles.</p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const TheoryHub = () => { 
+            const [activeTool, setActiveTool] = useState('dictionary'); 
+            return (
+                <div className="max-w-4xl mx-auto animate-fade-in">
                     <div className="flex justify-center mb-8 bg-slate-200 dark:bg-slate-800 p-1.5 rounded-2xl w-fit mx-auto shadow-inner overflow-x-auto max-w-full">
+                        <button onClick={() => setActiveTool('dictionary')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'dictionary' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Diccionario</button>
                         <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
                         <button onClick={() => setActiveTool('capo')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'capo' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Capo Calc</button>
                         <button onClick={() => setActiveTool('analyzer')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Analizador</button>
                     </div>
-                    {activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
+                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
                 </div>
             ); 
         };
-         const PracticeRoutine = () => { const [view, setView] = useState('landing'); const [currentExercise, setCurrentExercise] = useState(null); const [timer, setTimer] = useState(0); const [isActive, setIsActive] = useState(false); const [customTime, setCustomTime] = useState(5); const intervalRef = useRef(null); const EXERCISES = [{ id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 }, { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 }, { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 }, { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 }, { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }]; useEffect(() => { if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } return () => clearInterval(intervalRef.current); }, [isActive, timer]); const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; const toggleTimer = () => setIsActive(!isActive); const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Generar Nueva Rutina</button></div>); if (view === 'list') return (<div className="max-w-xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Practicar</button></div>))}</div></div>); return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="arrowLeft" size={20} /></button><span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span><h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p><div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div><div className="flex flex-col items-center z-10"><span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>{!isActive && <div className="flex gap-4 mt-2"><button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button><span className="text-xs font-bold text-slate-500">{customTime} min</span><button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button></div>}</div></div><div className="flex gap-4 justify-center"><button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button><button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button></div></div>); };
+                
+const PracticeRoutine = () => { const [view, setView] = useState('landing'); const [currentExercise, setCurrentExercise] = useState(null); const [timer, setTimer] = useState(0); const [isActive, setIsActive] = useState(false); const [customTime, setCustomTime] = useState(5); const intervalRef = useRef(null); const EXERCISES = [{ id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 }, { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 }, { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 }, { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 }, { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }]; useEffect(() => { if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } return () => clearInterval(intervalRef.current); }, [isActive, timer]); const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; const toggleTimer = () => setIsActive(!isActive); const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Generar Nueva Rutina</button></div>); if (view === 'list') return (<div className="max-w-xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Practicar</button></div>))}</div></div>); return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="arrowLeft" size={20} /></button><span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span><h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p><div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div><div className="flex flex-col items-center z-10"><span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>{!isActive && <div className="flex gap-4 mt-2"><button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button><span className="text-xs font-bold text-slate-500">{customTime} min</span><button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button></div>}</div></div><div className="flex gap-4 justify-center"><button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button><button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button></div></div>); };
          const SettingsPanel = ({ darkMode, setDarkMode, onClose }) => {
             const dialog = useDialog(); // Usamos el sistema de diálogo de la app
 
