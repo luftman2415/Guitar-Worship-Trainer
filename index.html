@@ -252,7 +252,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                             {/* Base Fret Indicator */}
                             {baseFret > 1 && <div className="absolute font-bold text-slate-500" style={{ left: `-${24 * scale}px`, top: `${5 * scale}px`, fontSize: `${12 * scale}px` }}>{baseFret}fr</div>}
 
-                            {/* Puntos (Notas) y Cuerdas al aire */}
+                            {/* Puntos e Intervalos */}
                             {chord.dots.map((d, i) => {
                                 const isO = d.fret === 0;
                                 return (
@@ -267,6 +267,8 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                          zIndex: 10,
                                          backgroundColor: isO ? 'transparent' : ''
                                      }}>
+                                     {/* TEXTO DEL INTERVALO (3, 5, 7, etc) */}
+                                     {!isO && d.label && <span style={{fontSize: `${7 * scale}px`}} className={`font-bold ${d.type === 'root' ? 'text-white' : 'text-white dark:text-slate-900'}`}>{d.label}</span>}
                                 </div>
                             )})}
                             
@@ -276,7 +278,8 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                     <span className={`font-black mt-2 dark:text-white truncate text-center ${size==='large' ? 'text-2xl mt-4' : 'text-[10px]'}`}>{chord.name}</span>
                 </div>
             );
-        };        
+        };
+
 
         // --- TRACK TRAINER (REPRODUCTOR Y SONGS) ---
 // --- TRACK TRAINER (REPRODUCTOR Y SONGS) ---
@@ -589,7 +592,101 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
          const ProgressStats = () => { const [stats, setStats] = useState({ streak: 0, totalMinutes: 0, lastDate: null }); const dialog = useDialog(); useEffect(() => { loadStats(); const handleUpdate = () => loadStats(); window.addEventListener('gwt-stats-updated', handleUpdate); return () => window.removeEventListener('gwt-stats-updated', handleUpdate); }, []); const loadStats = () => { const savedRaw = localStorage.getItem('gwt_stats'); const saved = savedRaw ? JSON.parse(savedRaw) : { streak: 0, totalMinutes: 0, lastDate: null }; setStats(saved); }; const resetStats = () => { dialog.confirm({ title: "¿Reiniciar estadísticas?", message: "Esto borrará tu racha actual y los minutos acumulados.", onConfirm: () => { localStorage.setItem('gwt_stats', JSON.stringify({ streak: 0, totalMinutes: 0, lastDate: null })); window.dispatchEvent(new Event('gwt-stats-updated')); } }); }; return (<div className="relative group"><div className="grid grid-cols-2 gap-4 w-full"><div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center relative overflow-hidden"><div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full mb-2 z-10"><Icon name="award" size={20} /></div><span className="text-2xl font-bold text-slate-800 dark:text-white z-10">{stats.streak}</span><span className="text-xs text-slate-500 font-medium z-10">Días racha</span></div><div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center"><div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full mb-2"><Icon name="clock" size={20} /></div><span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalMinutes.toFixed(1)}</span><span className="text-xs text-slate-500 font-medium">Minutos totales</span></div></div><button onClick={resetStats} className="absolute -top-3 -right-3 p-2 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-500 shadow-sm" title="Reiniciar estadísticas"><Icon name="trash" size={14} /></button></div>); };
          const logPracticeTime = (minutes) => { const raw = localStorage.getItem('gwt_stats'); const saved = raw ? JSON.parse(raw) : { streak: 0, totalMinutes: 0, lastDate: null }; const today = new Date().toDateString(); let newStreak = saved.streak; if (saved.lastDate !== today) { if (!saved.lastDate) { newStreak = 1; } else { const last = new Date(saved.lastDate); const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); if (last.toDateString() === yesterday.toDateString()) { newStreak += 1; } else { newStreak = 1; } } } const newStats = { streak: newStreak, totalMinutes: (Number(saved.totalMinutes) || 0) + minutes, lastDate: today }; localStorage.setItem('gwt_stats', JSON.stringify(newStats)); window.dispatchEvent(new Event('gwt-stats-updated')); };
          const Tuner = () => { const { resume, getContext } = useAudioContext(); const [isActive, setIsActive] = useState(false); const [note, setNote] = useState('--'); const [cents, setCents] = useState(0); const [errorMsg, setErrorMsg] = useState(null); const analyserRef = useRef(null); const rafRef = useRef(null); const streamRef = useRef(null); const autoCorrelate = (buf, sampleRate) => { let size = buf.length, rms = 0; for (let i = 0; i < size; i++) rms += buf[i] * buf[i]; if (Math.sqrt(rms / size) < 0.015) return -1; let r1 = 0, r2 = size - 1, thres = 0.2; for (let i = 0; i < size / 2; i++) if (Math.abs(buf[i]) < thres) { r1 = i; break; } for (let i = 1; i < size / 2; i++) if (Math.abs(buf[size - i]) < thres) { r2 = size - i; break; } const buf2 = buf.slice(r1, r2); size = buf2.length; const c = new Float32Array(size); for (let i = 0; i < size; i++) for (let j = 0; j < size - i; j++) c[i] = c[i] + buf2[j] * buf2[j + i]; let d = 0; while (c[d] > c[d + 1]) d++; let maxval = -1, maxpos = -1; for (let i = d; i < size; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; } let T0 = maxpos; const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1]; const a = (x1 + x3 - 2 * x2) / 2, b = (x3 - x1) / 2; if (a) T0 = T0 - b / (2 * a); return sampleRate / T0; }; const updatePitch = () => { const ctx = getContext(); if (!analyserRef.current || !ctx) return; const buf = new Float32Array(2048); analyserRef.current.getFloatTimeDomainData(buf); const ac = autoCorrelate(buf, ctx.sampleRate); if (ac !== -1) { const noteNum = 12 * (Math.log(ac / 440) / Math.log(2)); const noteRaw = Math.round(noteNum) + 69; setNote(NOTES[noteRaw % 12]); setCents(Math.floor(1200 * Math.log2(ac / (440 * Math.pow(2, (noteRaw - 69) / 12))))); } rafRef.current = requestAnimationFrame(updatePitch); }; const toggleTuner = async () => { if (isActive) { if (rafRef.current) cancelAnimationFrame(rafRef.current); if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()); setIsActive(false); setNote('--'); setCents(0); } else { setErrorMsg(null); await resume(); const ctx = getContext(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); streamRef.current = stream; const source = ctx.createMediaStreamSource(stream); const analyser = ctx.createAnalyser(); analyser.fftSize = 2048; source.connect(analyser); analyserRef.current = analyser; setIsActive(true); updatePitch(); } catch (err) { setErrorMsg("Error: Permiso de micrófono denegado."); } } }; useEffect(() => () => { if(isActive) toggleTuner(); }, []); const isInTune = isActive && note !== '--' && Math.abs(cents) < 5; const colorClass = !isActive ? 'text-slate-300' : isInTune ? 'text-emerald-500' : 'text-amber-500'; return (<div className="flex flex-col items-center p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm mx-auto"><h2 className="text-2xl font-bold mb-6 text-slate-800 dark:text-white">Afinador</h2>{errorMsg && <div className="mb-4 p-2 bg-red-100 text-red-600 text-xs rounded">{errorMsg}</div>}<div className="relative w-64 h-64 mb-8"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className="absolute inset-0 flex flex-col items-center justify-center"><span className={`text-8xl font-black ${colorClass} transition-colors`}>{note}</span><span className="text-slate-400 font-mono mt-2">{isActive ? (note !== '--' ? `${cents > 0 ? '+' : ''}${cents}` : 'Escuchando...') : 'OFF'}</span></div>{isActive && note !== '--' && (<div className={`absolute top-0 left-1/2 w-2 h-8 -ml-1 rounded-full origin-bottom transition-all duration-100 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ top: '-10px', height: '30px', transformOrigin: '50% 138px', transform: `rotate(${cents * 1.5}deg)` }} />)}</div><div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden relative"><div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10"></div>{isActive && note !== '--' && <div className={`h-full transition-all duration-75 ${isInTune ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: '10%', position: 'absolute', left: `calc(50% + ${cents}%)`, transform: 'translateX(-50%)', borderRadius: '99px' }}></div>}</div><button onClick={toggleTuner} className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-white transition-all w-full justify-center shadow-lg ${isActive ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isActive ? "micOff" : "mic"} /> {isActive ? "Detener" : "Activar Micrófono"}</button></div>); };
-         const Metronome = () => { const { resume, getContext } = useAudioContext(); const [isPlaying, setIsPlaying] = useState(false); const [bpm, setBpm] = useState(120); const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); const [subdivision, setSubdivision] = useState(1); const [visualBeat, setVisualBeat] = useState(false); const [trainerEnabled, setTrainerEnabled] = useState(false); const [trainerBars, setTrainerBars] = useState(4); const [trainerBpmInc, setTrainerBpmInc] = useState(5); const [presets, setPresets] = useState([]); const nextNoteTimeRef = useRef(0); const timerIDRef = useRef(null); const currentNoteRef = useRef(0); const currentBarRef = useRef(0); const startTimeRef = useRef(0); const tapTimesRef = useRef([]); const bpmRef = useRef(bpm); const bpmIncRef = useRef(trainerBpmInc); const barsIncRef = useRef(trainerBars); const trainerEnabledRef = useRef(trainerEnabled); const dialog = useDialog(); const isPlayingRef = useRef(isPlaying); useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]); useEffect(() => { bpmRef.current = bpm; }, [bpm]); useEffect(() => { bpmIncRef.current = trainerBpmInc; }, [trainerBpmInc]); useEffect(() => { barsIncRef.current = trainerBars; }, [trainerBars]); useEffect(() => { trainerEnabledRef.current = trainerEnabled; }, [trainerEnabled]); useEffect(() => { const savedPresets = localStorage.getItem('gwt_metronome_presets'); if (savedPresets) setPresets(JSON.parse(savedPresets)); }, []); const playClick = (time, type) => { const ctx = getContext(); if (!ctx) return; const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); if (type === 0) { osc.frequency.setValueAtTime(1500, time); gain.gain.setValueAtTime(1, time); } else if (type === 1) { osc.frequency.setValueAtTime(1000, time); gain.gain.setValueAtTime(0.7, time); } else { osc.frequency.setValueAtTime(800, time); gain.gain.setValueAtTime(0.3, time); } gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05); osc.start(time); osc.stop(time + 0.05); }; const scheduler = useCallback(() => { const ctx = getContext(); if (!ctx) return; while (nextNoteTimeRef.current < ctx.currentTime + 0.1) { const beatIndex = currentNoteRef.current; const notesPerMeasure = beatsPerMeasure * subdivision; let type = 2; if (beatIndex % notesPerMeasure === 0) type = 0; else if (beatIndex % subdivision === 0) type = 1; if (type === 0 && beatIndex > 0) { currentBarRef.current++; if (trainerEnabledRef.current && currentBarRef.current % barsIncRef.current === 0) { const newBpm = Math.min(300, bpmRef.current + bpmIncRef.current); bpmRef.current = newBpm; setBpm(newBpm); } } playClick(nextNoteTimeRef.current, type); if (type !== 2) { setTimeout(() => { setVisualBeat(true); setTimeout(() => setVisualBeat(false), 80); }, (nextNoteTimeRef.current - ctx.currentTime) * 1000); } nextNoteTimeRef.current += (60.0 / bpmRef.current) / subdivision; currentNoteRef.current++; } timerIDRef.current = setTimeout(scheduler, 25); }, [getContext, beatsPerMeasure, subdivision]); const togglePlay = () => { if (isPlaying) { setIsPlaying(false); clearTimeout(timerIDRef.current); if (startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); startTimeRef.current = 0; } } else { startTimeRef.current = Date.now(); resume().then((ctx) => { if(ctx) { currentNoteRef.current = 0; currentBarRef.current = 0; nextNoteTimeRef.current = ctx.currentTime + 0.05; setIsPlaying(true); scheduler(); }}); } }; const handleTap = () => { const now = Date.now(); let times = tapTimesRef.current; if (times.length > 0 && now - times[times.length - 1] > 2000) times = []; times.push(now); if (times.length > 4) times.shift(); tapTimesRef.current = times; if (times.length > 1) { let intervals = []; for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]); const avg = intervals.reduce((a, b) => a + b) / intervals.length; const newBpm = Math.round(60000 / avg); if (newBpm >= 30 && newBpm <= 300) setBpm(newBpm); } }; useEffect(() => { return () => { clearTimeout(timerIDRef.current); if (isPlayingRef.current && startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); } }; }, []); const savePreset = () => { dialog.prompt({ title: "Guardar configuración", message: "Asigna un nombre a este preset:", onConfirm: (name) => { if(!name) return; const newPreset = { id: Date.now(), name, bpm, beatsPerMeasure, subdivision, trainerEnabled, trainerBars, trainerBpmInc }; const updated = [...presets, newPreset]; setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); } }); }; const loadPreset = (p) => { setBpm(p.bpm); setBeatsPerMeasure(p.beatsPerMeasure); setSubdivision(p.subdivision); setTrainerEnabled(p.trainerEnabled); setTrainerBars(p.trainerBars); setTrainerBpmInc(p.trainerBpmInc); }; const deletePreset = (id, e) => { e.stopPropagation(); const updated = presets.filter(p => p.id !== id); setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); }; return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden animate-fade-in"><h2 className="text-3xl font-black text-center mt-8 mb-2 dark:text-white">Metrónomo</h2><div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div><div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>); };
+
+const Metronome = () => { 
+            const { resume, getContext } = useAudioContext(); 
+            const [isPlaying, setIsPlaying] = useState(false); 
+            const [bpm, setBpm] = useState(120); 
+            const [beatsPerMeasure, setBeatsPerMeasure] = useState(4); 
+            const [subdivision, setSubdivision] = useState(1); 
+            const[soundMode, setSoundMode] = useState('drum'); // 'click' o 'drum'
+            const [visualBeat, setVisualBeat] = useState(false); 
+            const [trainerEnabled, setTrainerEnabled] = useState(false); 
+            const [trainerBars, setTrainerBars] = useState(4); 
+            const[trainerBpmInc, setTrainerBpmInc] = useState(5); 
+            const [presets, setPresets] = useState([]); 
+            const nextNoteTimeRef = useRef(0); const timerIDRef = useRef(null); const currentNoteRef = useRef(0); const currentBarRef = useRef(0); const startTimeRef = useRef(0); const tapTimesRef = useRef([]); const bpmRef = useRef(bpm); const bpmIncRef = useRef(trainerBpmInc); const barsIncRef = useRef(trainerBars); const trainerEnabledRef = useRef(trainerEnabled); const soundModeRef = useRef(soundMode); const dialog = useDialog(); const isPlayingRef = useRef(isPlaying); 
+            useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]); useEffect(() => { bpmRef.current = bpm; }, [bpm]); useEffect(() => { bpmIncRef.current = trainerBpmInc; }, [trainerBpmInc]); useEffect(() => { barsIncRef.current = trainerBars; }, [trainerBars]); useEffect(() => { trainerEnabledRef.current = trainerEnabled; }, [trainerEnabled]); useEffect(() => { soundModeRef.current = soundMode; },[soundMode]);
+            useEffect(() => { const savedPresets = localStorage.getItem('gwt_metronome_presets'); if (savedPresets) setPresets(JSON.parse(savedPresets)); },[]); 
+            
+            const playDrum = (time, inst) => {
+                const ctx = getContext(); if (!ctx) return;
+                if(inst === 'kick') {
+                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+                    gain.gain.setValueAtTime(1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+                    osc.start(time); osc.stop(time + 0.5);
+                } else if(inst === 'snare') {
+                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                    osc.type = 'triangle'; osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(250, time);
+                    gain.gain.setValueAtTime(1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+                    osc.start(time); osc.stop(time + 0.2);
+                    const noiseSize = ctx.sampleRate * 0.2; const buffer = ctx.createBuffer(1, noiseSize, ctx.sampleRate);
+                    const data = buffer.getChannelData(0); for(let i=0; i<noiseSize; i++) data[i] = Math.random()*2-1;
+                    const noise = ctx.createBufferSource(); noise.buffer = buffer;
+                    const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 2000;
+                    const nGain = ctx.createGain();
+                    noise.connect(filter); filter.connect(nGain); nGain.connect(ctx.destination);
+                    nGain.gain.setValueAtTime(0.5, time); nGain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+                    noise.start(time);
+                } else if(inst === 'hihat') {
+                    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                    osc.type = 'square'; osc.frequency.value = 5000;
+                    const filter = ctx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 7000;
+                    osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+                    gain.gain.setValueAtTime(0.2, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05);
+                    osc.start(time); osc.stop(time + 0.05);
+                }
+            };
+
+            const playClick = (time, type) => {
+                const ctx = getContext(); if (!ctx) return;
+                const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination);
+                if (type === 0) { osc.frequency.setValueAtTime(1500, time); gain.gain.setValueAtTime(1, time); } 
+                else if (type === 1) { osc.frequency.setValueAtTime(1000, time); gain.gain.setValueAtTime(0.7, time); } 
+                else { osc.frequency.setValueAtTime(800, time); gain.gain.setValueAtTime(0.3, time); }
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05); osc.start(time); osc.stop(time + 0.05);
+            }; 
+
+            const scheduler = useCallback(() => { 
+                const ctx = getContext(); if (!ctx) return; 
+                while (nextNoteTimeRef.current < ctx.currentTime + 0.1) { 
+                    const beatIndex = currentNoteRef.current; const notesPerMeasure = beatsPerMeasure * subdivision; 
+                    let type = 2; 
+                    if (beatIndex % notesPerMeasure === 0) type = 0; else if (beatIndex % subdivision === 0) type = 1; 
+                    
+                    if (type === 0 && beatIndex > 0) { 
+                        currentBarRef.current++; 
+                        if (trainerEnabledRef.current && currentBarRef.current % barsIncRef.current === 0) { const newBpm = Math.min(300, bpmRef.current + bpmIncRef.current); bpmRef.current = newBpm; setBpm(newBpm); } 
+                    } 
+                    
+                    if (soundModeRef.current === 'drum') {
+                        const beatInMeasure = (beatIndex / subdivision) % beatsPerMeasure;
+                        if (type === 0) { playDrum(nextNoteTimeRef.current, 'kick'); playDrum(nextNoteTimeRef.current, 'hihat'); }
+                        else if (type === 1) { 
+                            if (beatInMeasure % 2 !== 0) { playDrum(nextNoteTimeRef.current, 'snare'); playDrum(nextNoteTimeRef.current, 'hihat'); } 
+                            else { playDrum(nextNoteTimeRef.current, 'kick'); playDrum(nextNoteTimeRef.current, 'hihat'); }
+                        }
+                        else { playDrum(nextNoteTimeRef.current, 'hihat'); }
+                    } else {
+                        playClick(nextNoteTimeRef.current, type); 
+                    }
+                    
+                    if (type !== 2) { setTimeout(() => { setVisualBeat(true); setTimeout(() => setVisualBeat(false), 80); }, (nextNoteTimeRef.current - ctx.currentTime) * 1000); } 
+                    nextNoteTimeRef.current += (60.0 / bpmRef.current) / subdivision; currentNoteRef.current++; 
+                } 
+                timerIDRef.current = setTimeout(scheduler, 25); 
+            }, [getContext, beatsPerMeasure, subdivision]); 
+
+            const togglePlay = () => { if (isPlaying) { setIsPlaying(false); clearTimeout(timerIDRef.current); if (startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); startTimeRef.current = 0; } } else { startTimeRef.current = Date.now(); resume().then((ctx) => { if(ctx) { currentNoteRef.current = 0; currentBarRef.current = 0; nextNoteTimeRef.current = ctx.currentTime + 0.05; setIsPlaying(true); scheduler(); }}); } }; const handleTap = () => { const now = Date.now(); let times = tapTimesRef.current; if (times.length > 0 && now - times[times.length - 1] > 2000) times =[]; times.push(now); if (times.length > 4) times.shift(); tapTimesRef.current = times; if (times.length > 1) { let intervals =[]; for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]); const avg = intervals.reduce((a, b) => a + b) / intervals.length; const newBpm = Math.round(60000 / avg); if (newBpm >= 30 && newBpm <= 300) setBpm(newBpm); } }; useEffect(() => { return () => { clearTimeout(timerIDRef.current); if (isPlayingRef.current && startTimeRef.current > 0) { const elapsed = (Date.now() - startTimeRef.current) / 60000; if (elapsed > 0.0) logPracticeTime(elapsed); } }; },[]); const savePreset = () => { dialog.prompt({ title: "Guardar configuración", message: "Asigna un nombre a este preset:", onConfirm: (name) => { if(!name) return; const newPreset = { id: Date.now(), name, bpm, beatsPerMeasure, subdivision, trainerEnabled, trainerBars, trainerBpmInc }; const updated =[...presets, newPreset]; setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); } }); }; const loadPreset = (p) => { setBpm(p.bpm); setBeatsPerMeasure(p.beatsPerMeasure); setSubdivision(p.subdivision); setTrainerEnabled(p.trainerEnabled); setTrainerBars(p.trainerBars); setTrainerBpmInc(p.trainerBpmInc); }; const deletePreset = (id, e) => { e.stopPropagation(); const updated = presets.filter(p => p.id !== id); setPresets(updated); localStorage.setItem('gwt_metronome_presets', JSON.stringify(updated)); }; 
+            
+            return (<div className="flex flex-col items-center bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto overflow-hidden animate-fade-in"><h2 className="text-3xl font-black text-center mt-8 mb-2 dark:text-white">Metrónomo</h2><div className="w-full bg-slate-50 dark:bg-slate-900 p-8 flex flex-col items-center relative"><div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-75 relative ${visualBeat ? 'bg-brand-100 dark:bg-brand-900/30 scale-105' : 'bg-slate-200 dark:bg-slate-800'}`}>{visualBeat && <div className="absolute inset-0 rounded-full animate-pulse-ring"></div>}<div className="text-5xl font-black text-slate-800 dark:text-white font-mono z-10">{bpm}</div><div className="absolute bottom-6 text-xs text-slate-400 font-bold tracking-widest uppercase">BPM</div></div></div><div className="w-full p-6 space-y-6"><div className="flex items-center gap-4"><button onClick={() => setBpm(b => Math.max(30, b - 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="minus" /></button><input type="range" min="30" max="250" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="flex-1 h-3 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-brand-600" /><button onClick={() => setBpm(b => Math.min(300, b + 1))} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-xl hover:bg-slate-200"><Icon name="plus" /></button></div><div className="flex gap-4"><button onClick={togglePlay} className={`flex-1 py-4 rounded-2xl text-white font-bold text-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 ${isPlaying ? 'bg-rose-500 hover:bg-rose-600' : 'bg-brand-600 hover:bg-brand-700'}`}><Icon name={isPlaying ? "pause" : "play"} fill="currentColor" /> {isPlaying ? "STOP" : "START"}</button><button onClick={handleTap} className="px-6 py-4 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-95 transition-colors">TAP</button></div>
+            <div className="flex justify-center gap-2 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl w-fit mx-auto"><button onClick={()=>setSoundMode('click')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${soundMode==='click' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>Click Clásico</button><button onClick={()=>setSoundMode('drum')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${soundMode==='drum' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>Batería</button></div>
+            <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Compás</label><select value={beatsPerMeasure} onChange={(e) => setBeatsPerMeasure(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="5">5/4</option><option value="6">6/8</option></select></div><div className="space-y-2"><label className="text-xs font-bold text-slate-500 uppercase">Subdivisión</label><select value={subdivision} onChange={(e) => setSubdivision(Number(e.target.value))} className="w-full p-3 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold dark:text-white outline-none focus:ring-2 focus:ring-brand-500"><option value="1">Negras</option><option value="2">Corcheas</option><option value="3">Tresillos</option><option value="4">Semicorcheas</option></select></div></div><div className={`p-4 rounded-xl border-2 transition-colors ${trainerEnabled ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20' : 'border-slate-100 dark:border-slate-700'}`}><div className="flex justify-between items-center mb-3"><div className="flex items-center gap-2"><Icon name="zap" className={trainerEnabled ? "text-brand-500" : "text-slate-400"} size={18} /><span className="font-bold text-sm dark:text-white">Entrenador de Velocidad</span></div><button onClick={() => setTrainerEnabled(!trainerEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${trainerEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'}`}><div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${trainerEnabled ? 'left-7' : 'left-1'}`}></div></button></div>{trainerEnabled && (<div className="flex items-center gap-2 text-sm dark:text-slate-300"><span>Subir</span><input type="number" value={trainerBpmInc} onChange={e => setTrainerBpmInc(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>BPM cada</span><input type="number" value={trainerBars} onChange={e => setTrainerBars(Number(e.target.value))} className="w-12 p-1 text-center bg-white dark:bg-slate-800 rounded border border-slate-300 dark:border-slate-600" /><span>compases</span></div>)}</div><div className="pt-2 border-t border-slate-100 dark:border-slate-700"><div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-400 uppercase">Mis Presets</span><button onClick={savePreset} className="text-xs text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/30 px-2 py-1 rounded hover:bg-brand-100">Guardar Actual</button></div><div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">{presets.length === 0 && <span className="text-xs text-slate-400 italic">No hay presets guardados.</span>}{presets.map(p => (<div key={p.id} onClick={() => loadPreset(p)} className="flex-shrink-0 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 group relative"><span className="text-sm font-bold dark:text-white mr-4">{p.name}</span><span className="text-xs text-slate-500 block">{p.bpm} BPM</span><button onClick={(e) => deletePreset(p.id, e)} className="absolute top-1 right-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"><Icon name="x" size={14}/></button></div>))}</div></div></div></div>); };        
+
+
          const IdeaRecorder = () => { const { getContext, resume } = useAudioContext(); const [isRecording, setIsRecording] = useState(false); const [recordings, setRecordings] = useState([]); const [timer, setTimer] = useState(0); const mediaRecorderRef = useRef(null); const chunksRef = useRef([]); const timerRef = useRef(null); const dialog = useDialog(); useEffect(() => { loadRecordings(); }, []); useEffect(() => { if (isRecording) { timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000); } else { clearInterval(timerRef.current); setTimer(0); } return () => clearInterval(timerRef.current); }, [isRecording]); const loadRecordings = async () => { try { const recs = await getRecordingsFromDB(); setRecordings(recs.sort((a,b) => b.date - a.date)); } catch(e) { console.error(e); } }; const startRecording = async () => { await resume(); try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); mediaRecorderRef.current = new MediaRecorder(stream); chunksRef.current = []; mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data); mediaRecorderRef.current.onstop = async () => { const blob = new Blob(chunksRef.current, { type: 'audio/webm' }); const id = Date.now(); await saveRecordingToDB({ id, blob, date: new Date() }); loadRecordings(); stream.getTracks().forEach(t => t.stop()); }; mediaRecorderRef.current.start(); setIsRecording(true); } catch (e) { alert("Error al acceder al micrófono"); } }; const stopRecording = () => { if (mediaRecorderRef.current && isRecording) { mediaRecorderRef.current.stop(); setIsRecording(false); } }; const playRecording = (blob) => { const url = URL.createObjectURL(blob); const audio = new Audio(url); audio.play(); }; const deleteRec = (id) => { dialog.confirm({ title: "¿Borrar grabación?", message: "Esta acción no se puede deshacer.", onConfirm: async () => { await deleteRecordingFromDB(id); loadRecordings(); } }); }; return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full text-xs font-mono font-bold text-slate-500">{isRecording ? new Date(timer * 1000).toISOString().substr(14, 5) : '0:00'}</div><h2 className="text-2xl font-bold mb-8 text-slate-800 dark:text-white">Grabadora de Ideas</h2><div className="flex justify-center mb-6"><button onClick={isRecording ? stopRecording : startRecording} className={`w-32 h-32 rounded-full flex flex-col items-center justify-center shadow-2xl transition-all border-4 ${isRecording ? 'bg-red-600 border-red-300 animate-pulse scale-105' : 'bg-red-500 border-red-100 hover:scale-105'}`}><span className="text-5xl font-bold text-white mb-1">{isRecording ? timer : '0'}</span></button></div><p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">{isRecording ? 'GRABANDO...' : 'TOQUE PARA GRABAR'}</p><div className="text-left"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">MIS IDEAS ({recordings.length})</h3><div className="space-y-3">{recordings.length === 0 && (<div className="p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-center text-slate-400 text-xs">No tienes grabaciones guardadas aún.</div>)}{recordings.map(rec => (<div key={rec.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-xl group transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"><div className="flex items-center gap-3"><button onClick={() => playRecording(rec.blob)} className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full text-slate-700 dark:text-white shadow-sm hover:scale-110 transition-transform"><Icon name="play" size={14} fill="currentColor"/></button><div><p className="text-xs font-bold dark:text-white">Idea {new Date(rec.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}).toLowerCase()}</p><p className="text-[10px] text-slate-400">{new Date(rec.date).toLocaleDateString()}</p></div></div><button onClick={() => deleteRec(rec.id)} className="text-slate-300 hover:text-red-500 transition-colors p-2"><Icon name="minus" size={16}/></button></div>))}</div></div></div>); };
          const JamLooper = () => { const { getContext, resume } = useAudioContext(); const [status, setStatus] = useState('idle'); const [audioBuffer, setAudioBuffer] = useState(null); const mediaRecorderRef = useRef(null); const chunksRef = useRef([]); const sourceNodeRef = useRef(null); const dialog = useDialog(); const startRecording = async () => { await resume(); const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false } }); mediaRecorderRef.current = new MediaRecorder(stream); chunksRef.current = []; mediaRecorderRef.current.ondataavailable = e => chunksRef.current.push(e.data); mediaRecorderRef.current.onstop = async () => { const blob = new Blob(chunksRef.current, { type: 'audio/webm' }); const arrayBuffer = await blob.arrayBuffer(); const ctx = getContext(); try { const decodedBuffer = await ctx.decodeAudioData(arrayBuffer); setAudioBuffer(decodedBuffer); } catch (e) { console.error("Error decoding audio", e); alert("Error procesando audio. Intenta de nuevo."); } stream.getTracks().forEach(t => t.stop()); }; mediaRecorderRef.current.start(); setStatus('recording'); }; const stopRecording = () => { if (mediaRecorderRef.current && status === 'recording') { mediaRecorderRef.current.stop(); setStatus('idle'); } }; const playLoop = async () => { await resume(); const ctx = getContext(); if (!audioBuffer) return; const source = ctx.createBufferSource(); source.buffer = audioBuffer; source.loop = true; source.connect(ctx.destination); source.start(); sourceNodeRef.current = source; setStatus('looping'); }; const stopLoop = () => { if (sourceNodeRef.current) sourceNodeRef.current.stop(); setStatus('idle'); }; const clearLoop = () => { if(!audioBuffer) return; dialog.confirm({ title: "¿Borrar Loop?", message: "Perderás lo que acabas de grabar.", onConfirm: () => { if (status === 'looping') stopLoop(); setAudioBuffer(null); setStatus('idle'); } }); }; const handleMainAction = () => { if (status === 'idle' && !audioBuffer) startRecording(); else if (status === 'recording') stopRecording(); else if (status === 'idle' && audioBuffer) playLoop(); else if (status === 'looping') stopLoop(); }; return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in relative overflow-hidden"><div className="w-20 h-20 bg-teal-100 dark:bg-teal-900/30 text-teal-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="repeat" size={40} /></div><h2 className="text-3xl font-black mb-2 text-slate-800 dark:text-white">Jam Looper</h2><p className="text-slate-500 text-sm mb-10">Cero latencia. Graba y toca encima al instante.</p><div className="flex justify-center mb-10 relative"><div className={`w-40 h-40 rounded-full flex items-center justify-center border-[6px] transition-all duration-300 relative ${status === 'recording' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : status === 'looping' ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800'}`}>{status === 'looping' && (<div className="absolute inset-0 rounded-full border-[6px] border-t-teal-200 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>)}<button onClick={handleMainAction} className="flex flex-col items-center justify-center w-full h-full z-10">{status === 'recording' ? (<><div className="w-4 h-4 bg-red-500 rounded-sm mb-2 animate-pulse"></div><span className="text-xs font-bold text-red-500 uppercase tracking-widest">Grabando</span></>) : status === 'looping' ? (<><span className="text-4xl font-black text-teal-600">ON</span><span className="text-[10px] font-bold text-teal-400 uppercase tracking-widest mt-1">Looping</span></>) : !audioBuffer ? (<><span className="text-5xl font-medium text-slate-400 mb-2">0</span><span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Grabar</span></>) : !sourceNodeRef.current ? (<><Icon name="play" size={32} className="text-teal-500 mb-1 ml-1" fill="currentColor"/><span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Play</span></>) : (<><Icon name="stop" size={32} className="text-teal-500 mb-1" fill="currentColor"/><span className="text-xs font-bold text-teal-500 uppercase tracking-widest">Stop</span></>)}</button></div></div><div className="flex gap-4 items-center justify-center">{audioBuffer ? (<><button onClick={() => { stopLoop(); playLoop(); }} className="bg-teal-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-teal-600/30 hover:bg-teal-700 active:scale-95 transition-all"><Icon name="repeat" size={18} /> Re-Sync</button><button onClick={clearLoop} className="bg-red-50 text-red-500 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-red-100 transition-colors"><Icon name="minus" size={18} /> Borrar</button></>) : (<p className="text-xs text-slate-400">Pulsa el círculo para comenzar</p>)}</div></div>); };
          const EarTrainer = () => { const { resume, getContext } = useAudioContext(); const [gameState, setGameState] = useState('menu'); const [trainerType, setTrainerType] = useState('interval'); const [level, setLevel] = useState(1); const [questionCount, setQuestionCount] = useState(0); const [isPlaying, setIsPlaying] = useState(false); const [currentTarget, setCurrentTarget] = useState(null); const [lastError, setLastError] = useState(null); const ALL_INTERVALS = [{ id: 'P1', name: "Unísono", semitones: 0 }, { id: 'm2', name: "2da Menor", semitones: 1 }, { id: 'M2', name: "2da Mayor", semitones: 2 }, { id: 'm3', name: "3ra Menor", semitones: 3 }, { id: 'M3', name: "3ra Mayor", semitones: 4 }, { id: 'P4', name: "4ta Justa", semitones: 5 }, { id: 'TT', name: "Tritono", semitones: 6 }, { id: 'P5', name: "5ta Justa", semitones: 7 }, { id: 'm6', name: "6ta Menor", semitones: 8 }, { id: 'M6', name: "6ta Mayor", semitones: 9 }, { id: 'm7', name: "7ma Menor", semitones: 10 }, { id: 'M7', name: "7ma Mayor", semitones: 11 }, { id: 'P8', name: "8va Justa", semitones: 12 }]; const INTERVAL_LEVELS = { 1: { name: "Nivel 1: Mayores y Justos", types: ['P1', 'M2', 'M3', 'P4', 'P5', 'M6', 'M7', 'P8'], direction: 'asc' }, 2: { name: "Nivel 2: Menores y Tritono", types: ['m2', 'm3', 'TT', 'm6', 'm7'], direction: 'asc' }, 3: { name: "Nivel 3: Maestro (Mix)", types: ['All'], direction: 'random' } }; const ALL_CHORDS = [{ id: 'M', name: 'Mayor', offsets: [0, 4, 7] }, { id: 'm', name: 'Menor', offsets: [0, 3, 7] }, { id: 'dim', name: 'Disminuido', offsets: [0, 3, 6] }, { id: 'aug', name: 'Aumentado', offsets: [0, 4, 8] }]; const CHORD_LEVELS = { 1: { name: "Nivel 1A: Mayor vs Menor", types: ['M', 'm'] }, 2: { name: "Nivel 1B: + Disminuidos", types: ['M', 'm', 'dim'] }, 3: { name: "Nivel 1C: + Aumentados", types: ['M', 'm', 'dim', 'aug'] } }; const QUESTIONS_PER_LEVEL = 10; const startLevel = async (lvl) => { await resume(); setLevel(lvl); setQuestionCount(0); setLastError(null); generateQuestion(lvl); setGameState('quiz'); }; const generateQuestion = (currentLvl) => { let pool = []; let config = null; const rootFreq = 220 * Math.pow(2, Math.floor(Math.random() * 12) / 12); let target = null; if (trainerType === 'interval') { config = INTERVAL_LEVELS[currentLvl]; let possibleIds = config.types; if (possibleIds[0] === 'All') possibleIds = ALL_INTERVALS.map(i => i.id); pool = ALL_INTERVALS.filter(i => possibleIds.includes(i.id)); target = pool[Math.floor(Math.random() * pool.length)]; let dir = config.direction; if (dir === 'random') dir = Math.random() < 0.5 ? 'asc' : 'desc'; setCurrentTarget({ ...target, rootFreq, direction: dir }); } else { config = CHORD_LEVELS[currentLvl]; pool = ALL_CHORDS.filter(c => config.types.includes(c.id)); target = pool[Math.floor(Math.random() * pool.length)]; setCurrentTarget({ ...target, rootFreq }); } setTimeout(() => { if(trainerType === 'interval') { playInterval(rootFreq, target.semitones, currentTarget ? currentTarget.direction : 'asc', true); } else { playChord(rootFreq, target.offsets, true); } }, 400); }; const playInterval = async (rootFreq, semitones, direction, override = false) => { if (isPlaying && !override) return; setIsPlaying(true); const ctx = getContext(); if (!ctx) return; const playTone = (freq, startTime, duration) => { const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.frequency.value = freq; osc.type = 'triangle'; osc.connect(gain); gain.connect(ctx.destination); gain.gain.setValueAtTime(0, startTime); gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05); gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration); osc.start(startTime); osc.stop(startTime + duration); }; const targetFreq = rootFreq * Math.pow(2, semitones / 12); const now = ctx.currentTime; if (direction === 'asc') { playTone(rootFreq, now, 0.6); playTone(targetFreq, now + 0.8, 0.8); } else { playTone(targetFreq, now, 0.6); playTone(rootFreq, now + 0.8, 0.8); } setTimeout(() => setIsPlaying(false), 1600); }; const playChord = async (rootFreq, offsets, override = false) => { if (isPlaying && !override) return; setIsPlaying(true); const ctx = getContext(); if (!ctx) return; const now = ctx.currentTime; const bassFreq = rootFreq / 2; const bassOsc = ctx.createOscillator(); const bassGain = ctx.createGain(); bassOsc.type = 'triangle'; bassOsc.frequency.value = bassFreq; bassOsc.connect(bassGain); bassGain.connect(ctx.destination); bassGain.gain.setValueAtTime(0, now); bassGain.gain.linearRampToValueAtTime(0.4, now + 0.05); bassGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0); bassOsc.start(now); bassOsc.stop(now + 2.1); offsets.forEach((semitone, i) => { const freq = rootFreq * Math.pow(2, semitone / 12); const osc = ctx.createOscillator(); const gain = ctx.createGain(); const filter = ctx.createBiquadFilter(); osc.type = 'triangle'; osc.frequency.value = freq; filter.type = 'lowpass'; filter.frequency.setValueAtTime(3000, now); filter.frequency.exponentialRampToValueAtTime(500, now + 1.5); osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination); const stagger = i * 0.03; gain.gain.setValueAtTime(0, now + stagger); gain.gain.linearRampToValueAtTime(0.25, now + stagger + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, now + stagger + 2.0); osc.start(now + stagger); osc.stop(now + stagger + 2.1); }); setTimeout(() => setIsPlaying(false), 2000); }; const handleAnswer = (selectedId) => { if (!currentTarget) return; if (selectedId === currentTarget.id) { const nextCount = questionCount + 1; setQuestionCount(nextCount); if (nextCount >= QUESTIONS_PER_LEVEL) { setGameState('level_complete'); } else { generateQuestion(level); } } else { setLastError(currentTarget); setGameState('level_failed'); } }; if (gameState === 'menu') return (<div className="max-w-lg mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="p-4 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-full mb-6 text-fuchsia-600 inline-block"><Icon name="ear" size={48} /></div><h2 className="text-3xl font-bold mb-2 dark:text-white">Entrenador Auditivo</h2><p className="text-slate-500 dark:text-slate-400 mb-6">Perfecciona tu oído. Acierta 10/10.</p><div className="flex justify-center gap-2 mb-8 bg-slate-100 dark:bg-slate-700 p-1 rounded-xl"><button onClick={() => setTrainerType('interval')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${trainerType === 'interval' ? 'bg-white dark:bg-slate-600 shadow text-fuchsia-600' : 'text-slate-400'}`}>Intervalos</button><button onClick={() => setTrainerType('chord')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${trainerType === 'chord' ? 'bg-white dark:bg-slate-600 shadow text-fuchsia-600' : 'text-slate-400'}`}>Acordes</button></div><div className="space-y-4">{(trainerType === 'interval' ? [1, 2, 3] : [1, 2, 3]).map(lvl => { const config = trainerType === 'interval' ? INTERVAL_LEVELS[lvl] : CHORD_LEVELS[lvl]; return (<button key={lvl} onClick={() => startLevel(lvl)} className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 p-4 rounded-2xl transition-all group text-left relative overflow-hidden"><div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity"><Icon name="play" size={60} className="text-fuchsia-500" /></div><h3 className="font-bold text-lg dark:text-white group-hover:text-fuchsia-600 transition-colors">{config.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{trainerType === 'interval' ? (config.types[0] === 'All' ? 'Todos los intervalos aleatorios' : config.types.map(id => ALL_INTERVALS.find(i => i.id === id)?.name).join(', ').substring(0, 45) + '...') : config.types.map(t => ALL_CHORDS.find(c=>c.id===t).name).join(', ')}</p></button>); })}</div></div>); if (gameState === 'level_failed') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal"><div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="x" size={40} /></div><h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Fallado!</h2><p className="text-slate-500 mb-6">La respuesta correcta era: <span className="font-bold text-slate-800 dark:text-white">{lastError?.name}</span>.</p><button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white font-bold rounded-xl hover:opacity-90">Volver al Menú</button></div>); if (gameState === 'level_complete') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-modal"><div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="award" size={40} /></div><h2 className="text-2xl font-bold mb-2 dark:text-white">¡Nivel Completado!</h2><p className="text-emerald-600 font-bold mb-6 text-xl">10 / 10 Perfecto</p><div className="space-y-3">{level < 3 && <button onClick={() => startLevel(level + 1)} className="w-full py-4 bg-fuchsia-600 text-white font-bold rounded-xl hover:bg-fuchsia-700 shadow-lg animate-pulse-ring">Siguiente Nivel</button>}<button onClick={() => setGameState('menu')} className="w-full py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl">Menú Principal</button></div></div>); if (!currentTarget) return null; let currentOptions = []; if (trainerType === 'interval') { const config = INTERVAL_LEVELS[level]; if (config.types[0] === 'All') currentOptions = ALL_INTERVALS; else currentOptions = ALL_INTERVALS.filter(i => config.types.includes(i.id)); } else { const config = CHORD_LEVELS[level]; currentOptions = ALL_CHORDS.filter(c => config.types.includes(c.id)); } return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="flex justify-between items-center mb-6"><button onClick={() => setGameState('menu')} className="text-slate-400 hover:text-slate-600"><Icon name="x" size={20}/></button><div className="flex flex-col items-center"><span className="text-xs font-bold text-fuchsia-500 uppercase tracking-widest">{trainerType === 'interval' ? INTERVAL_LEVELS[level].name.split(':')[0] : CHORD_LEVELS[level].name.split(':')[0]}</span><div className="text-sm font-bold dark:text-white">Progreso: {questionCount} / {QUESTIONS_PER_LEVEL}</div></div><div className="w-5"></div></div><div className="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full mb-8 overflow-hidden"><div className="bg-fuchsia-500 h-full transition-all duration-300" style={{ width: `${(questionCount / QUESTIONS_PER_LEVEL) * 100}%` }}></div></div><button onClick={() => trainerType === 'interval' ? playInterval(currentTarget.rootFreq, currentTarget.semitones, currentTarget.direction) : playChord(currentTarget.rootFreq, currentTarget.offsets)} className={`w-28 h-28 rounded-full flex items-center justify-center mx-auto shadow-2xl transition-all mb-8 ${isPlaying ? 'bg-fuchsia-400 scale-95 ring-4 ring-fuchsia-200' : 'bg-fuchsia-600 hover:bg-fuchsia-700 hover:scale-105 text-white'}`}><Icon name="ear" size={48} fill="currentColor" /></button><p className="text-slate-400 text-xs mb-6">Toca para escuchar {trainerType === 'interval' ? 'intervalo' : 'acorde'}</p><div className="grid grid-cols-2 gap-3">{currentOptions.map((opt) => (<button key={opt.id} onClick={() => handleAnswer(opt.id)} className="p-4 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-fuchsia-500 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 dark:text-white transition-all active:scale-95">{opt.name}</button>))}</div></div>); };
@@ -599,122 +696,111 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
          // --- HERRAMIENTAS DE TEORÍA ---
         const ChordAnalyzer = () => { const [input, setInput] = useState(''); const [analysis, setAnalysis] = useState(null); const normalizeChord = (chordStr) => { if(!chordStr) return null; let c = chordStr.trim(); c = c.charAt(0).toUpperCase() + c.slice(1); const match = c.match(/^([A-G][#b]?)(.*)$/); if (!match) return null; let root = match[1]; let quality = match[2]; const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' }; if (flatMap[root]) root = flatMap[root]; return { root, quality, original: c }; }; const analyzeChords = () => { if (!input.trim()) return; const rawChords = input.split(/[\s,-]+/).filter(c => c); const chords = rawChords.map(normalizeChord).filter(c => c); if (chords.length === 0) { setAnalysis({ error: "No se reconocieron acordes. Intenta usar notación americana (C, D, Em...)" }); return; } let bestKey = null; let maxScore = -999; const majorScaleIntervals = [0, 2, 4, 5, 7, 9, 11]; NOTES.forEach((keyRoot, keyIndex) => { let score = 0; const scaleNotesIndices = majorScaleIntervals.map(i => (keyIndex + i) % 12); const degrees = []; chords.forEach(chord => { const rootIndex = NOTES.indexOf(chord.root); if (rootIndex === -1) { score -= 10; degrees.push({ chord: chord.original, degree: '?', func: 'Error' }); return; } if (scaleNotesIndices.includes(rootIndex)) { score += 1; const degreeIndex = scaleNotesIndices.indexOf(rootIndex); const romanNumerals = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']; degrees.push({ chord: chord.original, degree: romanNumerals[degreeIndex], func: 'Diatónico' }); } else { score -= 1; degrees.push({ chord: chord.original, degree: '?', func: 'Cromático' }); } }); if (score > maxScore) { maxScore = score; bestKey = { root: keyRoot, type: 'Mayor', degrees }; } }); if(bestKey) setAnalysis(bestKey); }; return (<div className="space-y-6 animate-fade-in"><div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center"><p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">Descubre la tonalidad de tu canción ingresando los acordes.</p><div className="flex flex-col sm:flex-row gap-2 mb-6"><input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && analyzeChords()} placeholder="Ej: G D Em C" className="flex-1 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-violet-500 dark:text-white font-mono text-lg"/><button onClick={analyzeChords} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-3 sm:py-0 rounded-xl font-bold transition-colors w-full sm:w-auto">Analizar</button></div>{analysis && !analysis.error && (<div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-6 text-left animate-fade-in"><div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-700 pb-4 mb-4"><div><p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Tonalidad Detectada</p><h3 className="text-3xl font-black text-slate-800 dark:text-white">{analysis.root} <span className="text-violet-500">{analysis.type}</span></h3></div></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{analysis.degrees.map((d, i) => (<div key={i} className="bg-white dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 text-center"><div className="text-xl font-bold dark:text-white mb-1">{d.chord}</div><div className="inline-block px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded text-xs font-bold mb-1">{d.degree}</div></div>))}</div></div>)}{analysis?.error && (<div className="p-4 bg-red-100 text-red-600 rounded-xl font-bold text-sm">{analysis.error}</div>)}</div></div>); };
         
-        const CapoCalculator = () => {
-            const [originalKey, setOriginalKey] = useState('C');
-            const [targetShape, setTargetShape] = useState('G');
-            // Lista extendida para facilitar cálculos
-            const KEYS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-            
-            const calculateCapo = () => {
-                const oIndex = KEYS.indexOf(originalKey);
-                const tIndex = KEYS.indexOf(targetShape);
-                let diff = oIndex - tIndex;
-                if (diff < 0) diff += 12;
-                return diff;
-            };
-            const capoPos = calculateCapo();
-
+const DelayCalculator = () => {
+            const[bpm, setBpm] = useState(70);
+            const quarter = Math.round(60000 / bpm); const dottedEighth = Math.round(quarter * 0.75); const eighth = Math.round(quarter / 2);
             return (
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
-                    <h2 className="text-2xl font-bold mb-6 dark:text-white">Calculadora de Capo</h2>
-                    <div className="flex gap-4 mb-8">
-                        <div className="flex-1">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tono Original</label>
-                            <select value={originalKey} onChange={e => setOriginalKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">
-                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex items-center justify-center pt-6 text-slate-300"><Icon name="arrowLeft" size={24} className="rotate-180"/></div>
-                        <div className="flex-1">
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quiero tocar en</label>
-                            <select value={targetShape} onChange={e => setTargetShape(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">
-                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
-                            </select>
-                        </div>
+                    <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="clock" size={32} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Calculadora de Delay</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Ajusta los ms de tu pedalera al tempo exacto.</p>
+                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-8">
+                        <div className="text-5xl font-black text-slate-800 dark:text-white mb-2">{bpm} <span className="text-lg text-slate-400 font-bold">BPM</span></div>
+                        <input type="range" min="40" max="200" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-cyan-500"/>
+                        <div className="flex gap-4 justify-center mt-4"><button onClick={() => setBpm(b => Math.max(40, b - 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">-</button><button onClick={() => setBpm(b => Math.min(200, b + 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">+</button></div>
                     </div>
-                    <div className="bg-brand-50 dark:bg-brand-900/20 p-6 rounded-2xl border border-brand-100 dark:border-brand-800">
-                        <p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-2">Coloca el Capo en</p>
-                        <div className="text-6xl font-black text-brand-600 dark:text-white mb-2">{capoPos === 0 ? '0' : capoPos}</div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                            {capoPos === 0 ? 'Sin Capo' : `Traste ${capoPos}`}
-                        </p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm relative overflow-hidden"><div className="absolute -right-4 -top-4 opacity-10"><Icon name="activity" size={80}/></div><p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-1">Corchea con Puntillo</p><div className="text-4xl font-black text-cyan-700 dark:text-white">{dottedEighth} <span className="text-sm font-bold text-cyan-500">ms</span></div><p className="text-[10px] font-medium text-cyan-600/70 dark:text-cyan-400/70 mt-1">El sonido clásico de guitarra Worship</p></div>
+                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Negra</p><div className="text-xl font-bold text-slate-700 dark:text-white">{quarter} ms</div></div>
+                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm"><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Corchea</p><div className="text-xl font-bold text-slate-700 dark:text-white">{eighth} ms</div></div>
                     </div>
-                    <p className="mt-6 text-xs text-slate-400 italic">Ejemplo: Si la canción está en <span className="font-bold text-slate-500">Si (B)</span> y quieres usar acordes de <span className="font-bold text-slate-500">Sol (G)</span>, selecciona esos tonos arriba.</p>
                 </div>
             );
         };
 
-// --- NUEVO SISTEMA DE DICCIONARIO AVANZADO (CAGED DINÁMICO) ---
+        const CapoCalculator = () => {
+
+
+
+            const [originalKey, setOriginalKey] = useState('C');
+            const [targetShape, setTargetShape] = useState('G');
+            const KEYS =["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
+            const calculateCapo = () => { const oIndex = KEYS.indexOf(originalKey); const tIndex = KEYS.indexOf(targetShape); let diff = oIndex - tIndex; if (diff < 0) diff += 12; return diff; };
+            const capoPos = calculateCapo();
+            return (
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
+                    <h2 className="text-2xl font-bold mb-6 dark:text-white">Calculadora de Capo</h2>
+                    <div className="flex gap-4 mb-8">
+                        <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-2">Original</label><select value={originalKey} onChange={e => setOriginalKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">{KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                        <div className="flex items-center justify-center pt-6 text-slate-300"><Icon name="arrowLeft" size={24} className="rotate-180"/></div>
+                        <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tocar en</label><select value={targetShape} onChange={e => setTargetShape(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">{KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                    </div>
+                    <div className="bg-brand-50 dark:bg-brand-900/20 p-6 rounded-2xl border border-brand-100 dark:border-brand-800"><p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-2">Capo en</p><div className="text-6xl font-black text-brand-600 dark:text-white mb-2">{capoPos === 0 ? '0' : capoPos}</div><p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{capoPos === 0 ? 'Sin Capo' : `Traste ${capoPos}`}</p></div>
+                </div>
+            );
+        };
+
+        const NashvilleTranslator = () => {
+            const [key, setKey] = useState('C'); const [input, setInput] = useState('');
+            const majorScale =[0, 2, 4, 5, 7, 9, 11]; const degrees =['1', '2m', '3m', '4', '5', '6m', '7dim'];
+            const translate = () => {
+                if(!input.trim()) return '';
+                const rootIdx = NOTES.indexOf(key);
+                const scaleNotes = majorScale.map(i => NOTES[(rootIdx + i) % 12]);
+                const tokens = input.split(/[\s,-]+/);
+                return tokens.map(token => {
+                    if (!token) return '';
+                    const numMatch = token.match(/^([1-7])(m|dim)?(.*)$/);
+                    if (numMatch) {
+                        const degree = parseInt(numMatch[1]) - 1; let chord = scaleNotes[degree]; let quality = numMatch[2] || '';
+                        if(quality==='' &&['2m','3m','6m'].includes(degrees[degree])) quality='m';
+                        if(quality==='' && degree===6) quality='dim';
+                        return chord + quality + (numMatch[3]||'');
+                    }
+                    const chordMatch = token.match(/^([A-G][#b]?)(m|dim)?(.*)$/);
+                    if (chordMatch) {
+                        let chordRoot = chordMatch[1];
+                        const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+                        if (flatMap[chordRoot]) chordRoot = flatMap[chordRoot];
+                        const idx = scaleNotes.indexOf(chordRoot);
+                        if(idx !== -1) return (idx+1) + (chordMatch[2]||(degrees[idx].includes('m')?'m':'')) + (chordMatch[3]||'');
+                    }
+                    return token;
+                }).join(' - ');
+            };
+            return (
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
+                    <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="file" size={32} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Sistema Nashville</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Traduce entre Acordes y Números (Ej: 1, 4, 5)</p>
+                    <div className="mb-6 text-left"><label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Tono de la canción</label><select value={key} onChange={e=>setKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500">{NOTES.map(n=><option key={n} value={n}>{n}</option>)}</select></div>
+                    <div className="text-left mb-6"><label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Ingresa Acordes o Números</label><input type="text" placeholder="Ej: C F G o 1 4 5" value={input} onChange={e=>setInput(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800 min-h-[100px] flex flex-col justify-center"><p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">Traducción</p><div className="text-2xl font-black text-blue-700 dark:text-white font-mono tracking-widest">{translate() || '...'}</div></div>
+                </div>
+            );
+        };
+
         const CHORD_SYSTEM = {
-            'Mayor': [
-                { rs: 0, frets:[0, 2, 2, 1, 0, 0] }, // E shape
-                { rs: 1, frets: ['x', 0, 2, 2, 2, 0] }, // A shape
-                { rs: 2, frets:['x', 'x', 0, 2, 3, 2] }, // D shape
-                { rs: 1, frets:['x', 0, -1, -3, -2, -3] }, // C shape
-                { rs: 0, frets: [0, -1, -3, -3, -3, 0] } // G shape
-            ],
-            'Menor': [
-                { rs: 0, frets:[0, 2, 2, 0, 0, 0] }, // Em
-                { rs: 1, frets: ['x', 0, 2, 2, 1, 0] }, // Am
-                { rs: 2, frets:['x', 'x', 0, 2, 3, 1] } // Dm
-            ],
-            '7':[
-                { rs: 0, frets:[0, 2, 0, 1, 3, 0] }, // E7
-                { rs: 1, frets:['x', 0, 2, 0, 2, 0] }, // A7
-                { rs: 2, frets: ['x', 'x', 0, 2, 1, 2] }, // D7
-                { rs: 1, frets:['x', 0, -1, -3, -2, 0] }, // C7
-                { rs: 0, frets:[0, -1, -3, -3, -3, -2] } // G7
-            ],
-            'm7': [
-                { rs: 0, frets:[0, 2, 0, 0, 0, 0] }, // Em7
-                { rs: 1, frets: ['x', 0, 2, 0, 1, 0] }, // Am7
-                { rs: 2, frets:['x', 'x', 0, 2, 1, 1] } // Dm7
-            ],
-            'Maj7':[
-                { rs: 0, frets: [0, 2, 1, 1, 0, 0] }, // EMaj7
-                { rs: 1, frets:['x', 0, 2, 1, 2, 0] }, // AMaj7
-                { rs: 2, frets: ['x', 'x', 0, 2, 2, 2] }, // DMaj7
-                { rs: 1, frets:['x', 0, -1, -3, -3, -3] } // CMaj7
-            ],
-            'sus4':[
-                { rs: 0, frets:[0, 2, 2, 2, 0, 0] }, // Esus4
-                { rs: 1, frets:['x', 0, 2, 2, 3, 0] }, // Asus4
-                { rs: 2, frets: ['x', 'x', 0, 2, 3, 3] }, // Dsus4
-                { rs: 1, frets:['x', 0, 0, -3, -2, -2] } // Csus4
-            ],
-            'sus2':[
-                { rs: 1, frets:['x', 0, 2, 2, 0, 0] }, // Asus2
-                { rs: 2, frets:['x', 'x', 0, 2, 3, 0] }, // Dsus2
-                { rs: 1, frets: ['x', 0, -3, -3, -2, -3] }, // Csus2
-                { rs: 0, frets:[0, 2, 4, 4, 0, 0] } // Esus2
-            ],
-            'add9':[
-                { rs: 1, frets:['x', 0, -1, -3, 0, 0] }, // Cadd9 (X 3 2 0 3 3)
-                { rs: 0, frets:[0, -1, -3, -1, -3, 0] }, // Gadd9 (3 2 0 2 0 3)
-                { rs: 0, frets: [0, 2, 4, 1, 0, 0] }, // Eadd9
-                { rs: 1, frets:['x', 0, 2, 4, 2, 0] } // Aadd9
-            ],
-            'dim':[
-                { rs: 0, frets:[0, 1, 2, 0, 'x', 'x'] },
-                { rs: 1, frets:['x', 0, 1, 2, 1, 'x'] },
-                { rs: 2, frets:['x', 'x', 0, 1, 3, 1] }
-            ],
-            'aug': [
-                { rs: 0, frets:[0, 3, 2, 1, 1, 0] },
-                { rs: 1, frets:['x', 0, 3, 2, 2, 1] },
-                { rs: 2, frets: ['x', 'x', 0, 3, 3, 2] }
-            ]
+            'Mayor': [{ rs: 0, frets:[0, 2, 2, 1, 0, 0] }, { rs: 1, frets:['x', 0, 2, 2, 2, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 3, 2] }, { rs: 1, frets:['x', 0, -1, -3, -2, -3] }, { rs: 0, frets: [0, -1, -3, -3, -3, 0] }],
+            'Menor': [{ rs: 0, frets:[0, 2, 2, 0, 0, 0] }, { rs: 1, frets:['x', 0, 2, 2, 1, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 3, 1] }],
+            '7':[{ rs: 0, frets:[0, 2, 0, 1, 3, 0] }, { rs: 1, frets:['x', 0, 2, 0, 2, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 1, 2] }, { rs: 1, frets:['x', 0, -1, -3, -2, 0] }, { rs: 0, frets:[0, -1, -3, -3, -3, -2] }],
+            'm7':[{ rs: 0, frets:[0, 2, 0, 0, 0, 0] }, { rs: 1, frets:['x', 0, 2, 0, 1, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 1, 1] }],
+            'Maj7':[{ rs: 0, frets: [0, 2, 1, 1, 0, 0] }, { rs: 1, frets:['x', 0, 2, 1, 2, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 2, 2] }, { rs: 1, frets:['x', 0, -1, -3, -3, -3] }],
+            'sus4':[{ rs: 0, frets:[0, 2, 2, 2, 0, 0] }, { rs: 1, frets:['x', 0, 2, 2, 3, 0] }, { rs: 2, frets: ['x', 'x', 0, 2, 3, 3] }, { rs: 1, frets:['x', 0, 0, -3, -2, -2] }],
+            'sus2':[{ rs: 1, frets:['x', 0, 2, 2, 0, 0] }, { rs: 2, frets:['x', 'x', 0, 2, 3, 0] }, { rs: 1, frets:['x', 0, -3, -3, -2, -3] }, { rs: 0, frets:[0, 2, 4, 4, 0, 0] }],
+            'add9':[{ rs: 1, frets:['x', 0, -1, -3, 0, 0] }, { rs: 0, frets:[0, -1, -3, -1, -3, 0] }, { rs: 0, frets:[0, 2, 4, 1, 0, 0] }, { rs: 1, frets:['x', 0, 2, 4, 2, 0] }],
+            'dim':[{ rs: 0, frets:[0, 1, 2, 0, 'x', 'x'] }, { rs: 1, frets:['x', 0, 1, 2, 1, 'x'] }, { rs: 2, frets:['x', 'x', 0, 1, 3, 1] }],
+            'aug': [{ rs: 0, frets:[0, 3, 2, 1, 1, 0] }, { rs: 1, frets:['x', 0, 3, 2, 2, 1] }, { rs: 2, frets:['x', 'x', 0, 3, 3, 2] }]
         };
 
         const ChordDictionary = () => {
             const [selectedRoot, setSelectedRoot] = useState('C');
             const [selectedType, setSelectedType] = useState('Mayor');
             const TYPES =['Mayor', 'Menor', '7', 'm7', 'Maj7', 'sus4', 'sus2', 'add9', 'dim', 'aug'];
-            
-            // Índices de cuerdas al aire (E, A, D, G, B, e)
             const OPEN_NOTES =[4, 9, 2, 7, 11, 4]; 
+            const INT_NAMES = {0:'1', 1:'b2', 2:'2', 3:'b3', 4:'3', 5:'4', 6:'b5', 7:'5', 8:'b6', 9:'6', 10:'b7', 11:'7'};
 
-      const getChords = () => {
+            const getChords = () => {
                 const rootIndex = NOTES.indexOf(selectedRoot);
                 const shapes = CHORD_SYSTEM[selectedType] ||[];
                 const generated = new Array();
@@ -726,28 +812,19 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
 
                     [rootFret, rootFret + 12].forEach(rf => {
                         if (rf > 14) return;
-
                         let isValid = true;
                         const actualFrets = new Array();
-                        const muted = [false, false, false, false, false, false];
+                        const muted =[false, false, false, false, false, false];
                         
                         shape.frets.forEach((offset, sIdx) => {
-                            if (offset === 'x') {
-                                muted[sIdx] = true;
-                                actualFrets.push(-1);
-                            } else {
-                                const fret = rf + offset;
-                                if (fret < 0 || fret > 17) isValid = false;
-                                actualFrets.push(fret);
-                            }
+                            if (offset === 'x') { muted[sIdx] = true; actualFrets.push(-1); } 
+                            else { const fret = rf + offset; if (fret < 0 || fret > 17) isValid = false; actualFrets.push(fret); }
                         });
-
                         if (!isValid) return;
 
                         const frettedOnly = actualFrets.filter(f => f > 0);
                         if (frettedOnly.length > 0) {
-                            const minFret = Math.min(...frettedOnly);
-                            const maxFret = Math.max(...frettedOnly);
+                            const minFret = Math.min(...frettedOnly); const maxFret = Math.max(...frettedOnly);
                             if (maxFret - minFret > 4) return; 
                         }
 
@@ -756,121 +833,41 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                         seen.add(fretString);
 
                         let baseFret = frettedOnly.length > 0 ? Math.min(...frettedOnly) : 1;
-                        if (actualFrets.some(f => f === 0) || baseFret === 0) {
-                            baseFret = 1;
-                        }
+                        if (actualFrets.some(f => f === 0) || baseFret === 0) baseFret = 1;
 
-                        // Usamos otra variable para evitar el corte del chat
                         let puntosAcorde = new Array();
-                        
                         actualFrets.forEach((fret, sIdx) => {
                             if (fret >= 0) {
+                                const absoluteNote = (OPEN_NOTES[sIdx] + fret) % 12;
+                                const diff = (absoluteNote - rootIndex + 12) % 12;
+                                let lbl = INT_NAMES[diff];
+                                if(selectedType==='add9' && diff===2) lbl='9';
+                                if(selectedType==='Maj7' && diff===11) lbl='7M';
+                                if(selectedType==='sus4' && diff===5) lbl='4';
+                                if(selectedType==='sus2' && diff===2) lbl='2';
+                                
                                 const isRoot = (sIdx === shape.rs && fret === rf);
-                                puntosAcorde.push({
-                                    string: sIdx,
-                                    fret: fret === 0 ? 0 : (fret - baseFret + 1),
-                                    type: isRoot ? 'root' : 'note'
-                                });
+                                puntosAcorde.push({ string: sIdx, fret: fret === 0 ? 0 : (fret - baseFret + 1), type: isRoot ? 'root' : 'note', label: isRoot ? 'R' : lbl });
                             }
                         });
 
-                        generated.push({
-                            name: `${selectedRoot}${selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}`,
-                            muted: muted,
-                            baseFret: baseFret,
-                            dots: puntosAcorde,
-                            sortScore: baseFret + (actualFrets.includes(0) ? -10 : 0) 
-                        });
+                        generated.push({ name: `${selectedRoot}${selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}`, muted: muted, baseFret: baseFret, dots: puntosAcorde, sortScore: baseFret + (actualFrets.includes(0) ? -10 : 0) });
                     });
                 });
-
                 return generated.sort((a, b) => a.sortScore - b.sortScore).slice(0, 4);
             };
 
             const voicings = getChords();
-
             return (
                 <div className="animate-fade-in text-center max-w-2xl mx-auto">
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 mb-6">
                         <div className="flex flex-col gap-6 mb-2">
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Nota Raíz</label>
-                                <div className="flex flex-wrap gap-2 justify-center">
-                                    {NOTES.map(n => (
-                                        <button key={n} onClick={() => setSelectedRoot(n)} className={`w-10 h-10 rounded-xl font-bold transition-all ${selectedRoot === n ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30 scale-110' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{n}</button>
-                                    ))}
-                                </div>
-                            </div>
+                            <div><label className="text-xs font-bold text-slate-500 uppercase block mb-3">Nota Raíz</label><div className="flex flex-wrap gap-2 justify-center">{NOTES.map(n => (<button key={n} onClick={() => setSelectedRoot(n)} className={`w-10 h-10 rounded-xl font-bold transition-all ${selectedRoot === n ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30 scale-110' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{n}</button>))}</div></div>
                             <div className="h-px w-full bg-slate-100 dark:bg-slate-700"></div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Tipo de Acorde</label>
-                                <div className="flex flex-wrap gap-2 justify-center">
-                                    {TYPES.map(t => (
-                                        <button key={t} onClick={() => setSelectedType(t)} className={`px-4 py-2 rounded-xl font-bold transition-all text-sm ${selectedType === t ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{t === 'Mayor' ? 'May' : t === 'Menor' ? 'm' : t}</button>
-                                    ))}
-                                </div>
-                            </div>
+                            <div><label className="text-xs font-bold text-slate-500 uppercase block mb-3">Tipo de Acorde</label><div className="flex flex-wrap gap-2 justify-center">{TYPES.map(t => (<button key={t} onClick={() => setSelectedType(t)} className={`px-4 py-2 rounded-xl font-bold transition-all text-sm ${selectedType === t ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'}`}>{t === 'Mayor' ? 'May' : t === 'Menor' ? 'm' : t}</button>))}</div></div>
                         </div>
                     </div>
-
-                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                        <h3 className="text-lg font-bold mb-6 dark:text-white">Posiciones: <span className="text-brand-600">{selectedRoot}{selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}</span></h3>
-                        {voicings.length > 0 ? (
-                            <div className="flex flex-wrap justify-center gap-6 sm:gap-12">
-                                {voicings.map((v, i) => (
-                                    <div key={i} className="flex flex-col items-center">
-                                        <ChordDisplay chord={v} size="medium" />
-                                        <span className="text-xs text-slate-400 mt-4 font-bold bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">Posición {i + 1}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-500">No hay posiciones disponibles.</p>
-                        )}
-                    </div>
-                </div>
-            );
-        };
-
-const DelayCalculator = () => {
-            const[bpm, setBpm] = useState(70);
-            
-            // Fórmulas matemáticas para milisegundos
-            const quarter = Math.round(60000 / bpm);
-            const dottedEighth = Math.round(quarter * 0.75);
-            const eighth = Math.round(quarter / 2);
-
-            return (
-                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
-                    <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="clock" size={32} /></div>
-                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Calculadora de Delay</h2>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Ajusta los ms de tu pedalera al tempo exacto.</p>
-                    
-                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-8">
-                        <div className="text-5xl font-black text-slate-800 dark:text-white mb-2">{bpm} <span className="text-lg text-slate-400 font-bold">BPM</span></div>
-                        <input type="range" min="40" max="200" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-cyan-500"/>
-                        <div className="flex gap-4 justify-center mt-4">
-                            <button onClick={() => setBpm(b => Math.max(40, b - 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">-</button>
-                            <button onClick={() => setBpm(b => Math.min(200, b + 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">+</button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2 bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm relative overflow-hidden">
-                            <div className="absolute -right-4 -top-4 opacity-10"><Icon name="activity" size={80}/></div>
-                            <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-1">Corchea con Puntillo</p>
-                            <div className="text-4xl font-black text-cyan-700 dark:text-white">{dottedEighth} <span className="text-sm font-bold text-cyan-500">ms</span></div>
-                            <p className="text-[10px] font-medium text-cyan-600/70 dark:text-cyan-400/70 mt-1">El sonido clásico de guitarra Worship</p>
-                        </div>
-                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Negra</p>
-                            <div className="text-xl font-bold text-slate-700 dark:text-white">{quarter} ms</div>
-                        </div>
-                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Corchea</p>
-                            <div className="text-xl font-bold text-slate-700 dark:text-white">{eighth} ms</div>
-                        </div>
-                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><h3 className="text-lg font-bold mb-6 dark:text-white">Posiciones: <span className="text-brand-600">{selectedRoot}{selectedType === 'Mayor' ? '' : selectedType === 'Menor' ? 'm' : selectedType}</span></h3>{voicings.length > 0 ? (<div className="flex flex-wrap justify-center gap-6 sm:gap-12">{voicings.map((v, i) => (<div key={i} className="flex flex-col items-center"><ChordDisplay chord={v} size="medium" /><span className="text-xs text-slate-400 mt-4 font-bold bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-full">Posición {i + 1}</span></div>))}</div>) : (<p className="text-sm text-slate-500">No hay posiciones disponibles.</p>)}</div>
                 </div>
             );
         };
@@ -879,22 +876,23 @@ const DelayCalculator = () => {
             const [activeTool, setActiveTool] = useState('dictionary'); 
             return (
                 <div className="max-w-4xl mx-auto animate-fade-in">
-                    {/* Contenedor adaptativo: Deslizable en móvil, centrado en PC */}
                     <div className="w-full overflow-x-auto no-scrollbar mb-8 pb-2">
                         <div className="flex sm:justify-center min-w-full px-2">
                             <div className="flex bg-slate-200 dark:bg-slate-800 p-1.5 rounded-2xl shadow-inner mx-auto sm:mx-0 gap-1">
                                 <button onClick={() => setActiveTool('dictionary')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'dictionary' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Diccionario</button>
-                                <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
+                                <button onClick={() => setActiveTool('nashville')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'nashville' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nashville (Números)</button>
                                 <button onClick={() => setActiveTool('delay')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'delay' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Delay ms</button>
+                                <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
                                 <button onClick={() => setActiveTool('capo')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'capo' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Capo Calc</button>
                                 <button onClick={() => setActiveTool('analyzer')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Analizador</button>
                             </div>
                         </div>
                     </div>
-                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'delay' ? <DelayCalculator /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
+                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'nashville' ? <NashvilleTranslator /> : activeTool === 'delay' ? <DelayCalculator /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
                 </div>
             ); 
         };        
+
 
                 
 const PracticeRoutine = () => { const [view, setView] = useState('landing'); const [currentExercise, setCurrentExercise] = useState(null); const [timer, setTimer] = useState(0); const [isActive, setIsActive] = useState(false); const [customTime, setCustomTime] = useState(5); const intervalRef = useRef(null); const EXERCISES = [{ id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 }, { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 }, { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 }, { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 }, { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }]; useEffect(() => { if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } return () => clearInterval(intervalRef.current); }, [isActive, timer]); const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; const toggleTimer = () => setIsActive(!isActive); const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Generar Nueva Rutina</button></div>); if (view === 'list') return (<div className="max-w-xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Practicar</button></div>))}</div></div>); return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="arrowLeft" size={20} /></button><span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span><h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p><div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div><div className="flex flex-col items-center z-10"><span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>{!isActive && <div className="flex gap-4 mt-2"><button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button><span className="text-xs font-bold text-slate-500">{customTime} min</span><button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button></div>}</div></div><div className="flex gap-4 justify-center"><button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button><button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button></div></div>); };
