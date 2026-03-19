@@ -327,21 +327,22 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 ); 
             };
             
-            const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
-                const [audioUrl, setAudioUrl] = useState(null); 
+       const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
+                const[audioUrl, setAudioUrl] = useState(null); 
                 const [isPlaying, setIsPlaying] = useState(false); 
                 const [speed, setSpeed] = useState(1.0); 
-                const [volume, setVolume] = useState(1.0); 
+                const[volume, setVolume] = useState(1.0); 
                 const[loopStart, setLoopStart] = useState(null); 
                 const [loopEnd, setLoopEnd] = useState(null); 
-                const [currentTime, setCurrentTime] = useState(0); 
+                const[currentTime, setCurrentTime] = useState(0); 
                 const [duration, setDuration] = useState(0); 
                 const [zoomedChord, setZoomedChord] = useState(null); 
                 
-                // NUEVAS FUNCIONES DE ESTUDIO
-                const [showTabs, setShowTabs] = useState(false);
-                const[bookmarks, setBookmarks] = useState(song.bookmarks || []);
-                const [trainerMode, setTrainerMode] = useState(false);
+                // ESTADO PARA LA TERCERA PESTAÑA
+                const [contentView, setContentView] = useState('lyrics'); // 'lyrics', 'tabs', 'speeds'
+                
+                const [bookmarks, setBookmarks] = useState(song.bookmarks || []);
+                const[trainerMode, setTrainerMode] = useState(false);
                 const [countdown, setCountdown] = useState(null);
 
                 const audioRef = useRef(null);
@@ -351,10 +352,13 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 
                 useEffect(() => { loopStartRef.current = loopStart; }, [loopStart]);
                 useEffect(() => { loopEndRef.current = loopEnd; }, [loopEnd]);
-                useEffect(() => { trainerModeRef.current = trainerMode; }, [trainerMode]);
-                useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+                useEffect(() => { trainerModeRef.current = trainerMode; },[trainerMode]);
+                useEffect(() => { isPlayingRef.current = isPlaying; },[isPlaying]);
                 
-                useEffect(() => { const loadAudio = async () => { if (song.isTeacher) { setAudioUrl(`./tracks/${song.filename}`); } else if (song.hasAudio) { const url = await getSongAudio(song.id); if (url) setAudioUrl(url); } }; loadAudio(); return () => { if(audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl); }; }, [song]);
+                // Efecto de seguridad: Si saltamos de una canción del profe a una propia, oculta la pestaña de velocidades
+                useEffect(() => { if(!song.isTeacher && contentView === 'speeds') setContentView('lyrics'); },[song, contentView]);
+
+                useEffect(() => { const loadAudio = async () => { if (song.isTeacher) { setAudioUrl(`./tracks/${song.filename}`); } else if (song.hasAudio) { const url = await getSongAudio(song.id); if (url) setAudioUrl(url); } }; loadAudio(); return () => { if(audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl); }; },[song]);
                 
                 useEffect(() => { 
                     const audio = audioRef.current; if(!audio) return; 
@@ -364,7 +368,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                         setCurrentTime(audio.currentTime); 
                         const lStart = loopStartRef.current; const lEnd = loopEndRef.current;
                         if (lEnd !== null && lStart !== null && audio.currentTime >= lEnd) { 
-                            // LÓGICA DEL MODO ENTRENADOR
                             if (trainerModeRef.current && !isCountingRef.current) {
                                 isCountingRef.current = true;
                                 audio.pause();
@@ -396,7 +399,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                     audio.addEventListener('loadedmetadata', handleMetadata); 
                     audio.addEventListener('ended', handleEnded); 
                     return () => { audio.removeEventListener('timeupdate', handleTimeUpdate); audio.removeEventListener('loadedmetadata', handleMetadata); audio.removeEventListener('ended', handleEnded); }; 
-                }, [speed, volume, loopStart, loopEnd, isPlaying, audioUrl]);
+                },[speed, volume, loopStart, loopEnd, isPlaying, audioUrl]);
                 
                 const togglePlay = () => { const audio = audioRef.current; if(!audio) return; if (isPlaying) audio.pause(); else audio.play().catch(e=>console.log(e)); setIsPlaying(!isPlaying); }; 
                 const setPointA = () => setLoopStart(currentTime); 
@@ -405,7 +408,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 const formatTime = (t) => { if (!t) return "0:00"; const m = Math.floor(t/60); const s = Math.floor(t%60); return `${m}:${s<10?'0':''}${s}`; }; 
                 const adjustSpeed = (delta) => { setSpeed(prev => { const next = Math.round((prev + delta) * 100) / 100; return Math.max(0.5, Math.min(1.5, next)); }); };
                 
-                // MARCADORES
                 const dialog = useDialog();
                 const addBookmark = () => {
                     dialog.prompt({
@@ -423,7 +425,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
 
                 return (<div className="flex flex-col h-[calc(100vh-140px)] md:h-[85vh] bg-white dark:bg-slate-800 rounded-3xl shadow-xl overflow-hidden relative max-w-4xl mx-auto border border-slate-200 dark:border-slate-700">
                 
-                {/* OVERLAY DEL CONTEO ENTRENADOR */}
                 {countdown !== null && (
                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/80 rounded-3xl backdrop-blur-sm">
                         <span className="text-xl text-indigo-400 font-bold mb-4 uppercase tracking-widest">Prepárate...</span>
@@ -440,18 +441,18 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                         {!song.isTeacher && <button onClick={onEdit} className="p-3 bg-indigo-50 text-indigo-600 dark:bg-slate-700 dark:text-white rounded-full hover:bg-indigo-100 transition-colors"><Icon name="edit" size={20}/></button>}{song.isTeacher && <div className="w-10"></div>}
                     </div>
                     
-                    {/* BARRA DE MARCADORES */}
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-3 pb-1 items-center">
+<div className="flex gap-3 overflow-x-auto no-scrollbar mb-2 py-3 px-1 items-center">
                         <button onClick={addBookmark} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-lg text-[10px] font-bold shrink-0 flex items-center gap-1 hover:bg-slate-200"><Icon name="plus" size={12}/> Marcador</button>
                         {bookmarks.map(bm => (
                             <div key={bm.id} className="group relative shrink-0">
                                 <button onClick={() => jumpToBookmark(bm.time)} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-lg text-[10px] font-bold hover:bg-indigo-100">
                                     {bm.label} <span className="opacity-70">({formatTime(bm.time)})</span>
                                 </button>
-                                <button onClick={() => deleteBookmark(bm.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100">×</button>
+                                <button onClick={() => deleteBookmark(bm.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] font-black flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md z-10 hover:bg-red-600 transition-colors">×</button>
                             </div>
                         ))}
-                    </div>
+                    </div>                   
+
 
                     {audioUrl ? (
                         <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700">
@@ -464,6 +465,14 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                 </div>
                             </div>
                             
+                            {/* CONTROL DE VOLUMEN RECUPERADO */}
+                            <div className="flex items-center gap-2 mb-3 px-2 bg-white dark:bg-slate-900/50 rounded-xl p-2 border border-slate-100 dark:border-slate-700">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-6">Vol</span>
+                                <Icon name="volume" size={16} className="text-slate-400" />
+                                <input type="range" min="0" max="1" step="0.05" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-indigo-500"/>
+                                <span className="text-[10px] font-bold dark:text-white w-8 text-right">{Math.round(volume * 100)}%</span>
+                            </div>
+
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-xl p-2 border border-slate-200 dark:border-slate-700 flex-[0.7] justify-between">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Vel</span>
@@ -492,17 +501,81 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-slate-800 scroll-smooth">
-                    {/* SELECTOR TABS vs LETRA */}
-                    <div className="flex gap-3 border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
-                        <button onClick={()=>setShowTabs(false)} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors ${!showTabs ? 'bg-slate-200 dark:bg-slate-700 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Letra y Acordes</button>
-                        {song.tabs && <button onClick={()=>setShowTabs(true)} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 ${showTabs ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="file" size={14}/> Tablatura / Notas</button>}
+                    {/* SELECTOR DE PESTAÑAS (Tabs SIEMPRE visible) */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
+                        <button onClick={()=>setContentView('lyrics')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap ${contentView === 'lyrics' ? 'bg-slate-200 dark:bg-slate-700 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Letra y Acordes</button>
+                        <button onClick={()=>setContentView('tabs')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'tabs' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="file" size={14}/> Tablatura / Notas</button>
+                        
+                        {/* ESTA PESTAÑA SOLO APARECE SI ES CANCIÓN DEL PROFESOR */}
+                        {song.isTeacher && (
+                            <button onClick={()=>setContentView('speeds')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'speeds' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="music" size={14}/> Pistas de Estudio</button>
+                        )}
                     </div>
 
-                    {!showTabs && song.customChords && song.customChords.length > 0 && (<div className="mb-6 pb-6 border-b border-slate-100 dark:border-slate-700 overflow-x-auto"><div className="flex justify-between items-center mb-3"><p className="text-[10px] uppercase font-bold text-slate-400">Acordes Especiales</p><Icon name="search" size={14} className="text-slate-300"/></div><div className="flex gap-4 pb-2">{song.customChords.map((chord, i) => (<ChordDisplay key={i} chord={chord} onClick={() => setZoomedChord(chord)} />))}</div></div>)}
+                    {contentView === 'lyrics' && (
+                        <div className="animate-fade-in">
+                            {song.customChords && song.customChords.length > 0 && (<div className="mb-6 pb-6 border-b border-slate-100 dark:border-slate-700 overflow-x-auto"><div className="flex justify-between items-center mb-3"><p className="text-[10px] uppercase font-bold text-slate-400">Acordes Especiales</p><Icon name="search" size={14} className="text-slate-300"/></div><div className="flex gap-4 pb-2">{song.customChords.map((chord, i) => (<ChordDisplay key={i} chord={chord} onClick={() => setZoomedChord(chord)} />))}</div></div>)}
+                            <pre className="whitespace-pre-wrap font-mono text-sm sm:text-base dark:text-slate-300 leading-relaxed pb-24 font-medium">{song.body}</pre>
+                        </div>
+                    )}
                     
-                    <pre className="whitespace-pre-wrap font-mono text-sm sm:text-base dark:text-slate-300 leading-relaxed pb-24 font-medium">
-                        {showTabs ? song.tabs : song.body}
-                    </pre>
+                    {contentView === 'tabs' && (
+                        <div className="animate-fade-in">
+                            {song.tabs ? (
+                                <pre className="whitespace-pre-wrap font-mono text-sm sm:text-base dark:text-slate-300 leading-relaxed pb-24 font-medium">{song.tabs}</pre>
+                            ) : (
+                                <div className="text-center py-8 text-slate-400 italic text-sm">No hay tablaturas ni notas guardadas para esta canción.</div>
+                            )}
+                        </div>
+                    )}
+
+                    {contentView === 'speeds' && song.isTeacher && (
+                        <div className="pb-24 animate-fade-in">
+                            <div className="text-center mb-6">
+                                <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 mx-auto rounded-full flex items-center justify-center mb-3"><Icon name="music" size={24} /></div>
+                                <h3 className="text-lg font-bold dark:text-white">Audios Oficiales de Práctica</h3>
+                                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">Pistas ralentizadas en calidad de estudio (En construcción).</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* 100% ROJO */}
+                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-rose-500 group transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-2xl font-black text-rose-600 dark:text-rose-400">100%</div>
+                                        <div><p className="text-sm font-bold dark:text-white">Velocidad Original</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Normal</p></div>
+                                    </div>
+                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-rose-500 transition-colors" />
+                                </button>
+                                
+                                {/* 95% ANARANJADO */}
+                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-orange-500 group transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-2xl font-black text-orange-500 dark:text-orange-400">95%</div>
+                                        <div><p className="text-sm font-bold dark:text-white">Ligeramente Lento</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Ensayo</p></div>
+                                    </div>
+                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-orange-500 transition-colors" />
+                                </button>
+                                
+                                {/* 90% AMARILLO (Ámbar) */}
+                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-amber-500 group transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-2xl font-black text-amber-500 dark:text-amber-400">90%</div>
+                                        <div><p className="text-sm font-bold dark:text-white">Moderado</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Estudio</p></div>
+                                    </div>
+                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
+                                </button>
+
+                                {/* 85% VERDE (Esmeralda) */}
+                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-emerald-500 group transition-all text-left">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-2xl font-black text-emerald-500 dark:text-emerald-400">85%</div>
+                                        <div><p className="text-sm font-bold dark:text-white">Muy Lento</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Detalle</p></div>
+                                    </div>
+                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div></div>); 
             };
 
@@ -759,20 +832,70 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
             );
         };
 
+const DelayCalculator = () => {
+            const[bpm, setBpm] = useState(70);
+            
+            // Fórmulas matemáticas para milisegundos
+            const quarter = Math.round(60000 / bpm);
+            const dottedEighth = Math.round(quarter * 0.75);
+            const eighth = Math.round(quarter / 2);
+
+            return (
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
+                    <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="clock" size={32} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Calculadora de Delay</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Ajusta los ms de tu pedalera al tempo exacto.</p>
+                    
+                    <div className="bg-slate-50 dark:bg-slate-900 p-6 rounded-2xl mb-8">
+                        <div className="text-5xl font-black text-slate-800 dark:text-white mb-2">{bpm} <span className="text-lg text-slate-400 font-bold">BPM</span></div>
+                        <input type="range" min="40" max="200" value={bpm} onChange={(e) => setBpm(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer dark:bg-slate-700 accent-cyan-500"/>
+                        <div className="flex gap-4 justify-center mt-4">
+                            <button onClick={() => setBpm(b => Math.max(40, b - 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">-</button>
+                            <button onClick={() => setBpm(b => Math.min(200, b + 1))} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95">+</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-2 bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-xl border border-cyan-200 dark:border-cyan-800 shadow-sm relative overflow-hidden">
+                            <div className="absolute -right-4 -top-4 opacity-10"><Icon name="activity" size={80}/></div>
+                            <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-widest mb-1">Corchea con Puntillo</p>
+                            <div className="text-4xl font-black text-cyan-700 dark:text-white">{dottedEighth} <span className="text-sm font-bold text-cyan-500">ms</span></div>
+                            <p className="text-[10px] font-medium text-cyan-600/70 dark:text-cyan-400/70 mt-1">El sonido clásico de guitarra Worship</p>
+                        </div>
+                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Negra</p>
+                            <div className="text-xl font-bold text-slate-700 dark:text-white">{quarter} ms</div>
+                        </div>
+                        <div className="bg-white dark:bg-slate-700 p-4 rounded-xl border border-slate-100 dark:border-slate-600 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Corchea</p>
+                            <div className="text-xl font-bold text-slate-700 dark:text-white">{eighth} ms</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const TheoryHub = () => { 
             const [activeTool, setActiveTool] = useState('dictionary'); 
             return (
                 <div className="max-w-4xl mx-auto animate-fade-in">
-                    <div className="flex justify-center mb-8 bg-slate-200 dark:bg-slate-800 p-1.5 rounded-2xl w-fit mx-auto shadow-inner overflow-x-auto max-w-full">
-                        <button onClick={() => setActiveTool('dictionary')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'dictionary' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Diccionario</button>
-                        <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
-                        <button onClick={() => setActiveTool('capo')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'capo' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Capo Calc</button>
-                        <button onClick={() => setActiveTool('analyzer')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Analizador</button>
+                    {/* Contenedor adaptativo: Deslizable en móvil, centrado en PC */}
+                    <div className="w-full overflow-x-auto no-scrollbar mb-8 pb-2">
+                        <div className="flex sm:justify-center min-w-full px-2">
+                            <div className="flex bg-slate-200 dark:bg-slate-800 p-1.5 rounded-2xl shadow-inner mx-auto sm:mx-0 gap-1">
+                                <button onClick={() => setActiveTool('dictionary')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'dictionary' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Diccionario</button>
+                                <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
+                                <button onClick={() => setActiveTool('delay')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'delay' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Delay ms</button>
+                                <button onClick={() => setActiveTool('capo')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'capo' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Capo Calc</button>
+                                <button onClick={() => setActiveTool('analyzer')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'analyzer' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Analizador</button>
+                            </div>
+                        </div>
                     </div>
-                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
+                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'delay' ? <DelayCalculator /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
                 </div>
             ); 
-        };
+        };        
+
                 
 const PracticeRoutine = () => { const [view, setView] = useState('landing'); const [currentExercise, setCurrentExercise] = useState(null); const [timer, setTimer] = useState(0); const [isActive, setIsActive] = useState(false); const [customTime, setCustomTime] = useState(5); const intervalRef = useRef(null); const EXERCISES = [{ id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 }, { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 }, { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 }, { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 }, { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }]; useEffect(() => { if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } return () => clearInterval(intervalRef.current); }, [isActive, timer]); const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; const toggleTimer = () => setIsActive(!isActive); const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Generar Nueva Rutina</button></div>); if (view === 'list') return (<div className="max-w-xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Practicar</button></div>))}</div></div>); return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="arrowLeft" size={20} /></button><span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span><h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p><div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div><div className="flex flex-col items-center z-10"><span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>{!isActive && <div className="flex gap-4 mt-2"><button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button><span className="text-xs font-bold text-slate-500">{customTime} min</span><button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button></div>}</div></div><div className="flex gap-4 justify-center"><button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button><button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button></div></div>); };
          const SettingsPanel = ({ darkMode, setDarkMode, onClose }) => {
