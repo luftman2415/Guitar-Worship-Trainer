@@ -280,11 +280,11 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
             );
         };
 
-
-        // --- TRACK TRAINER (REPRODUCTOR Y SONGS) ---
 // --- TRACK TRAINER (REPRODUCTOR Y SONGS) ---
         const TrackTrainer = () => {
-            const [view, setView] = useState('list'); const [activeTab, setActiveTab] = useState('my_songs'); const [songs, setSongs] = useState(() => { const saved = localStorage.getItem('gwt_songs'); return saved ? JSON.parse(saved) : []; }); const [currentSong, setCurrentSong] = useState(null); const dialog = useDialog();
+            const [view, setView] = useState('list'); const [activeTab, setActiveTab] = useState('my_songs'); const[songs, setSongs] = useState(() => { const saved = localStorage.getItem('gwt_songs'); return saved ? JSON.parse(saved) : []; }); 
+            const [teacherData, setTeacherData] = useState(() => { const saved = localStorage.getItem('gwt_teacher_data'); return saved ? JSON.parse(saved) : {}; });
+            const [currentSong, setCurrentSong] = useState(null); const dialog = useDialog();
             
             const TEACHER_TRACKS =[
                 { id: 't1', title: "La Sunamita", artist: "Montesanto", filename: "La Sunamita.mp3", isTeacher: true },
@@ -297,13 +297,15 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
             ];
 
             useEffect(() => { localStorage.setItem('gwt_songs', JSON.stringify(songs)); }, [songs]);
+            useEffect(() => { localStorage.setItem('gwt_teacher_data', JSON.stringify(teacherData)); },[teacherData]);
+
             const saveSongAudio = async (id, blob) => { if(!blob) return; try { await saveRecordingToDB({ id: `song_${id}_audio`, blob, date: new Date() }); } catch(e) { console.error("Error:", e); } };
             const getSongAudio = async (id) => { try { const record = await getRecordingById(`song_${id}_audio`); return record ? URL.createObjectURL(record.blob) : null; } catch(e) { return null; } };
             const saveSong = async (songData, audioFile) => { let savedSong = { ...songData }; if (!savedSong.id) savedSong.id = Date.now(); if (audioFile) { savedSong.hasAudio = true; await saveSongAudio(savedSong.id, audioFile); } if (songData.id) { setSongs(songs.map(s => s.id === savedSong.id ? savedSong : s)); } else { setSongs([...songs, savedSong]); } setView('list'); };
             const deleteSong = (id, e) => { e.stopPropagation(); dialog.confirm({ title: "¿Eliminar canción?", message: "Se borrará permanentemente.", onConfirm: async () => { setSongs(songs.filter(s => s.id !== id)); await deleteRecordingFromDB(`song_${id}_audio`); } }); };
             
             const SongEditor = ({ song = {}, onSave, onCancel }) => { 
-                const [title, setTitle] = useState(song.title || ''); const [artist, setArtist] = useState(song.artist || ''); const [body, setBody] = useState(song.body || ''); const [tabs, setTabs] = useState(song.tabs || ''); const [key, setKey] = useState(song.key || ''); const [bpm, setBpm] = useState(song.bpm || ''); const [customChords, setCustomChords] = useState(song.customChords || []); const[audioFile, setAudioFile] = useState(null); const [showChordBuilder, setShowChordBuilder] = useState(false); const[showLibrary, setShowLibrary] = useState(false); const handleAddChord = (chordData) => { setCustomChords([...customChords, chordData]); setShowChordBuilder(false); }; const importFromLibrary = (chord) => { setCustomChords([...customChords, chord]); setShowLibrary(false); }; const getLibraryChords = () => { const raw = localStorage.getItem('gwt_chord_library'); return raw ? JSON.parse(raw) :[]; }; 
+                const [title, setTitle] = useState(song.title || ''); const [artist, setArtist] = useState(song.artist || ''); const[body, setBody] = useState(song.body || ''); const [tabs, setTabs] = useState(song.tabs || ''); const [key, setKey] = useState(song.key || ''); const [bpm, setBpm] = useState(song.bpm || ''); const [customChords, setCustomChords] = useState(song.customChords || []); const[audioFile, setAudioFile] = useState(null); const [showChordBuilder, setShowChordBuilder] = useState(false); const[showLibrary, setShowLibrary] = useState(false); const handleAddChord = (chordData) => { setCustomChords([...customChords, chordData]); setShowChordBuilder(false); }; const importFromLibrary = (chord) => { setCustomChords([...customChords, chord]); setShowLibrary(false); }; const getLibraryChords = () => { const raw = localStorage.getItem('gwt_chord_library'); return raw ? JSON.parse(raw) :[]; }; 
                 return (
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl animate-fade-in relative max-w-2xl mx-auto">
                         <h3 className="text-xl font-bold mb-4 dark:text-white">{song.id ? 'Editar' : 'Nueva'} Canción</h3>
@@ -330,15 +332,15 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 ); 
             };
             
-       const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
+            const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
                 const[audioUrl, setAudioUrl] = useState(null); 
-                const [isPlaying, setIsPlaying] = useState(false); 
+                const[isPlaying, setIsPlaying] = useState(false); 
                 const [speed, setSpeed] = useState(1.0); 
                 const[volume, setVolume] = useState(1.0); 
                 const[loopStart, setLoopStart] = useState(null); 
                 const [loopEnd, setLoopEnd] = useState(null); 
                 const[currentTime, setCurrentTime] = useState(0); 
-                const [duration, setDuration] = useState(0); 
+                const[duration, setDuration] = useState(0); 
                 const [zoomedChord, setZoomedChord] = useState(null); 
                 
                 // ESTADO PARA LA TERCERA PESTAÑA
@@ -346,7 +348,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 
                 const [bookmarks, setBookmarks] = useState(song.bookmarks || []);
                 const[trainerMode, setTrainerMode] = useState(false);
-                const [countdown, setCountdown] = useState(null);
+                const[countdown, setCountdown] = useState(null);
 
                 const audioRef = useRef(null);
                 const loopStartRef = useRef(null); const loopEndRef = useRef(null);
@@ -444,7 +446,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                         {!song.isTeacher && <button onClick={onEdit} className="p-3 bg-indigo-50 text-indigo-600 dark:bg-slate-700 dark:text-white rounded-full hover:bg-indigo-100 transition-colors"><Icon name="edit" size={20}/></button>}{song.isTeacher && <div className="w-10"></div>}
                     </div>
                     
-<div className="flex gap-3 overflow-x-auto no-scrollbar mb-2 py-3 px-1 items-center">
+                    <div className="flex gap-3 overflow-x-auto no-scrollbar mb-2 py-3 px-1 items-center">
                         <button onClick={addBookmark} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-lg text-[10px] font-bold shrink-0 flex items-center gap-1 hover:bg-slate-200"><Icon name="plus" size={12}/> Marcador</button>
                         {bookmarks.map(bm => (
                             <div key={bm.id} className="group relative shrink-0">
@@ -454,8 +456,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                 <button onClick={() => deleteBookmark(bm.id)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] font-black flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-md z-10 hover:bg-red-600 transition-colors">×</button>
                             </div>
                         ))}
-                    </div>                   
-
+                    </div>
 
                     {audioUrl ? (
                         <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700">
@@ -468,7 +469,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                 </div>
                             </div>
                             
-                            {/* CONTROL DE VOLUMEN RECUPERADO */}
                             <div className="flex items-center gap-2 mb-3 px-2 bg-white dark:bg-slate-900/50 rounded-xl p-2 border border-slate-100 dark:border-slate-700">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-6">Vol</span>
                                 <Icon name="volume" size={16} className="text-slate-400" />
@@ -504,12 +504,10 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-slate-800 scroll-smooth">
-                    {/* SELECTOR DE PESTAÑAS (Tabs SIEMPRE visible) */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
                         <button onClick={()=>setContentView('lyrics')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap ${contentView === 'lyrics' ? 'bg-slate-200 dark:bg-slate-700 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Letra y Acordes</button>
                         <button onClick={()=>setContentView('tabs')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'tabs' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="file" size={14}/> Tablatura / Notas</button>
                         
-                        {/* ESTA PESTAÑA SOLO APARECE SI ES CANCIÓN DEL PROFESOR */}
                         {song.isTeacher && (
                             <button onClick={()=>setContentView('speeds')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'speeds' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="music" size={14}/> Pistas de Estudio</button>
                         )}
@@ -541,7 +539,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* 100% ROJO */}
                                 <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-rose-500 group transition-all text-left">
                                     <div className="flex items-center gap-4">
                                         <div className="text-2xl font-black text-rose-600 dark:text-rose-400">100%</div>
@@ -550,7 +547,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                     <Icon name="play" size={20} className="text-slate-300 group-hover:text-rose-500 transition-colors" />
                                 </button>
                                 
-                                {/* 95% ANARANJADO */}
                                 <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-orange-500 group transition-all text-left">
                                     <div className="flex items-center gap-4">
                                         <div className="text-2xl font-black text-orange-500 dark:text-orange-400">95%</div>
@@ -559,7 +555,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                     <Icon name="play" size={20} className="text-slate-300 group-hover:text-orange-500 transition-colors" />
                                 </button>
                                 
-                                {/* 90% AMARILLO (Ámbar) */}
                                 <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-amber-500 group transition-all text-left">
                                     <div className="flex items-center gap-4">
                                         <div className="text-2xl font-black text-amber-500 dark:text-amber-400">90%</div>
@@ -568,7 +563,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                                     <Icon name="play" size={20} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
                                 </button>
 
-                                {/* 85% VERDE (Esmeralda) */}
                                 <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-emerald-500 group transition-all text-left">
                                     <div className="flex items-center gap-4">
                                         <div className="text-2xl font-black text-emerald-500 dark:text-emerald-400">85%</div>
@@ -583,10 +577,18 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
             };
 
              if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => setView('list')} />;
-             if (view === 'detail') return <TrackPlayerDetail song={currentSong} onBack={() => setView('list')} onEdit={() => setView('editor')} onUpdateSong={(updatedSong) => { setCurrentSong(updatedSong); setSongs(songs.map(s => s.id === updatedSong.id ? updatedSong : s)); }} />;
+             if (view === 'detail') return <TrackPlayerDetail song={currentSong} onBack={() => setView('list')} onEdit={() => setView('editor')} onUpdateSong={(updatedSong) => { 
+                setCurrentSong(updatedSong); 
+                if (updatedSong.isTeacher) {
+                    setTeacherData(prev => ({ ...prev, [updatedSong.id]: updatedSong }));
+                } else {
+                    setSongs(songs.map(s => s.id === updatedSong.id ? updatedSong : s)); 
+                }
+             }} />;
              
-             return (<div className="max-w-2xl mx-auto space-y-6"><div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 gap-4"><div className="flex items-center gap-3"><div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full"><Icon name="music" size={24} /></div><div><h2 className="text-xl font-bold dark:text-white">Estudio de Canciones</h2><p className="text-xs text-slate-500">Pistas, Letras y Acordes</p></div></div><button onClick={() => { setCurrentSong({}); setView('editor'); }} className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all active:scale-95"><Icon name="plus" size={18}/> Crear Nueva</button></div><div className="flex p-1 bg-slate-200 dark:bg-slate-700 rounded-2xl"><button onClick={() => setActiveTab('my_songs')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'my_songs' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mis Canciones</button><button onClick={() => setActiveTab('class')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'class' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Repertorio Clase</button></div><div className="grid gap-3 animate-fade-in">{activeTab === 'my_songs' && (<>{songs.length === 0 && (<div className="text-center py-12 px-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700"><div className="text-slate-300 mb-2"><Icon name="music" size={48} /></div><p className="text-slate-500 font-bold mb-1">Tu repertorio está vacío</p><p className="text-xs text-slate-400">Usa el botón "Crear Nueva" para subir tus MP3 y escribir letras.</p></div>)}{songs.map(song => (<div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group"><div className="flex items-center gap-4 overflow-hidden"><div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${song.hasAudio ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}><Icon name={song.hasAudio ? "music" : "file"} size={20}/></div><div className="min-w-0"><h3 className="font-bold text-slate-800 dark:text-white leading-tight truncate">{song.title}</h3><p className="text-xs text-slate-500 font-medium truncate">{song.artist || 'Artista desconocido'} {song.key && `• ${song.key}`}</p></div></div><button onClick={(e) => deleteSong(song.id, e)} className="p-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button></div>))} </>)}{activeTab === 'class' && (<>{TEACHER_TRACKS.map((track) => (<div key={track.id} onClick={() => { setCurrentSong(track); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all"><div className="w-12 h-12 rounded-full bg-teal-100 text-teal-600 dark:bg-teal-900/30 flex items-center justify-center shrink-0 font-bold text-lg">{track.title.charAt(0)}</div><div className="min-w-0"><h3 className="font-bold text-slate-800 dark:text-white leading-tight truncate">{track.title}</h3><p className="text-xs text-teal-600 font-bold truncate">{track.artist}</p></div><div className="ml-auto text-slate-300"><Icon name="play" size={20} /></div></div>))}<p className="text-center text-[10px] text-slate-400 mt-4">Estas canciones están incluidas en la aplicación.</p></>)}</div></div>);
-         };       
+             return (<div className="max-w-2xl mx-auto space-y-6"><div className="flex flex-col sm:flex-row justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 gap-4"><div className="flex items-center gap-3"><div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full"><Icon name="music" size={24} /></div><div><h2 className="text-xl font-bold dark:text-white">Estudio de Canciones</h2><p className="text-xs text-slate-500">Pistas, Letras y Acordes</p></div></div><button onClick={() => { setCurrentSong({}); setView('editor'); }} className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all active:scale-95"><Icon name="plus" size={18}/> Crear Nueva</button></div><div className="flex p-1 bg-slate-200 dark:bg-slate-700 rounded-2xl"><button onClick={() => setActiveTab('my_songs')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'my_songs' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Mis Canciones</button><button onClick={() => setActiveTab('class')} className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'class' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'}`}>Repertorio Clase</button></div><div className="grid gap-3 animate-fade-in">{activeTab === 'my_songs' && (<>{songs.length === 0 && (<div className="text-center py-12 px-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700"><div className="text-slate-300 mb-2"><Icon name="music" size={48} /></div><p className="text-slate-500 font-bold mb-1">Tu repertorio está vacío</p><p className="text-xs text-slate-400">Usa el botón "Crear Nueva" para subir tus MP3 y escribir letras.</p></div>)}{songs.map(song => (<div key={song.id} onClick={() => { setCurrentSong(song); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all group"><div className="flex items-center gap-4 overflow-hidden"><div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${song.hasAudio ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}><Icon name={song.hasAudio ? "music" : "file"} size={20}/></div><div className="min-w-0"><h3 className="font-bold text-slate-800 dark:text-white leading-tight truncate">{song.title}</h3><p className="text-xs text-slate-500 font-medium truncate">{song.artist || 'Artista desconocido'} {song.key && `• ${song.key}`}</p></div></div><button onClick={(e) => deleteSong(song.id, e)} className="p-3 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Icon name="trash" size={18}/></button></div>))} </>)}{activeTab === 'class' && (<>{TEACHER_TRACKS.map((track) => { const fullTrack = { ...track, ...(teacherData[track.id] || {}) }; return (<div key={fullTrack.id} onClick={() => { setCurrentSong(fullTrack); setView('detail'); }} className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4 cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all"><div className="w-12 h-12 rounded-full bg-teal-100 text-teal-600 dark:bg-teal-900/30 flex items-center justify-center shrink-0 font-bold text-lg">{fullTrack.title.charAt(0)}</div><div className="min-w-0"><h3 className="font-bold text-slate-800 dark:text-white leading-tight truncate">{fullTrack.title}</h3><p className="text-xs text-teal-600 font-bold truncate">{fullTrack.artist}</p></div><div className="ml-auto text-slate-300"><Icon name="play" size={20} /></div></div>); })}<p className="text-center text-[10px] text-slate-400 mt-4">Estas canciones están incluidas en la aplicación.</p></>)}</div></div>);
+        };
+
 
          
          const ProgressStats = () => { const [stats, setStats] = useState({ streak: 0, totalMinutes: 0, lastDate: null }); const dialog = useDialog(); useEffect(() => { loadStats(); const handleUpdate = () => loadStats(); window.addEventListener('gwt-stats-updated', handleUpdate); return () => window.removeEventListener('gwt-stats-updated', handleUpdate); }, []); const loadStats = () => { const savedRaw = localStorage.getItem('gwt_stats'); const saved = savedRaw ? JSON.parse(savedRaw) : { streak: 0, totalMinutes: 0, lastDate: null }; setStats(saved); }; const resetStats = () => { dialog.confirm({ title: "¿Reiniciar estadísticas?", message: "Esto borrará tu racha actual y los minutos acumulados.", onConfirm: () => { localStorage.setItem('gwt_stats', JSON.stringify({ streak: 0, totalMinutes: 0, lastDate: null })); window.dispatchEvent(new Event('gwt-stats-updated')); } }); }; return (<div className="relative group"><div className="grid grid-cols-2 gap-4 w-full"><div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center relative overflow-hidden"><div className="p-2 bg-orange-100 dark:bg-orange-900/30 text-orange-600 rounded-full mb-2 z-10"><Icon name="award" size={20} /></div><span className="text-2xl font-bold text-slate-800 dark:text-white z-10">{stats.streak}</span><span className="text-xs text-slate-500 font-medium z-10">Días racha</span></div><div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center"><div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-full mb-2"><Icon name="clock" size={20} /></div><span className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalMinutes.toFixed(1)}</span><span className="text-xs text-slate-500 font-medium">Minutos totales</span></div></div><button onClick={resetStats} className="absolute -top-3 -right-3 p-2 bg-slate-200 dark:bg-slate-700 text-slate-500 rounded-full md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-red-100 hover:text-red-500 shadow-sm" title="Reiniciar estadísticas"><Icon name="trash" size={14} /></button></div>); };
