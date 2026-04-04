@@ -121,47 +121,48 @@
             }
         }
 
-        // --- ICONOS ---
+// --- ICONOS CORREGIDOS ---
         const Icon = ({ name, size = 24, className = "" }) => {
             const icons = {
-                home: <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>,
-                mic: <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>,
-                micOff: <path d="M1 1l22 22M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>,
+                home: <g><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></g>,
+                mic: <g><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></g>,
+                micOff: <g><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></g>,
                 activity: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>,
-                music: <path d="M9 18V5l12-2v13"></path>,
-                grid: <rect x="3" y="3" width="7" height="7"></rect>,
-                sun: <circle cx="12" cy="12" r="5"></circle>,
+                music: <g><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></g>,
+                grid: <g><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></g>,
+                sun: <g><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></g>,
                 moon: <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>,
                 play: <polygon points="5 3 19 12 5 21 5 3"></polygon>,
-                pause: <rect x="6" y="4" width="4" height="16"></rect>,
+                pause: <g><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></g>,
                 stop: <rect x="6" y="6" width="12" height="12"></rect>,
-                plus: <line x1="12" y1="5" x2="12" y2="19"></line>,
+                plus: <g><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></g>,
                 minus: <line x1="5" y1="12" x2="19" y2="12"></line>,
-                search: <circle cx="11" cy="11" r="8"></circle>,
-                trash: <polyline points="3 6 5 6 21 6"></polyline>,
+                search: <g><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></g>,
+                trash: <g><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></g>,
                 edit: <g><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></g>,
-                award: <circle cx="12" cy="8" r="7"></circle>,
-                clock: <circle cx="12" cy="12" r="10"></circle>,
-                x: <line x1="18" y1="6" x2="6" y2="18"></line>,
+                award: <g><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></g>,
+                clock: <g><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></g>,
+                x: <g><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></g>,
                 zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>,
-                analyze: <path d="M2 12h10M9 4v16M3 7l13 13M16 7l-13 13"></path>,
-                alert: <circle cx="12" cy="12" r="10"></circle>,
-                book: <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>,
-                ear: <path d="M12 2a10 10 0 0 0-10 10v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H4a8 8 0 0 1 15.6 1.6"></path>,
+                analyze: <g><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></g>,
+                alert: <g><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></g>,
+                book: <g><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></g>,
+                ear: <g><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></g>,
                 circle: <circle cx="12" cy="12" r="10"></circle>,
-                download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>,
-                upload: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"></path>,
-                layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></g>,
-                repeat: <g><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></g>,
-                lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></g>,
-                file: <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>,
+                download: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></g>,
+                upload: <g><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></g>,
+                layers: <g><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></g>,
+                repeat: <g><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></g>,
+                lock: <g><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></g>,
+                file: <g><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></g>,
                 check: <polyline points="20 6 9 17 4 12"></polyline>,
-                rewind: <polygon points="11 19 2 12 11 5 11 19"></polygon>,
+                rewind: <g><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></g>,
                 arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></g>,
-                volume: <path d="M11 5L6 9H2v6h4l5 4V5zM15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                volume: <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></g>
             };
             return (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name] || <circle cx="12" cy="12" r="10" />}</svg>);
-        };
+        };        
+
 
         // --- UTILS DE BASE DE DATOS (IndexedDB) ---
         const DB_NAME = 'gwt_audio_db'; const DB_STORE = 'recordings';
@@ -1181,14 +1182,88 @@ const PracticeRoutine = () => { const [view, setView] = useState('landing'); con
                                 </div>
                             )}
 
-                            {view === 'home' && (
-                                <div className="space-y-8 py-8">
-                                    <div className="text-center space-y-4"><h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white tracking-tight">Guitar <span className="text-brand-600">Worship</span> Trainer</h1><p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-lg">Tu compañero de ensayo todo en uno.</p><div className="max-w-md mx-auto mt-6"><ProgressStats key={updateTrigger} /></div></div>
-                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Herramientas</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('tuner')} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-indigo-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div><h3 className="font-bold text-lg">Afinador</h3><p className="text-xs opacity-90 mt-1">Cromático</p></div><div onClick={() => setView('tracks')} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-indigo-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="music" size={24} /></div><h3 className="font-bold text-lg">Pistas & Songs</h3><p className="text-xs opacity-90 mt-1">Player y Letras</p></div><div onClick={() => setView('metronome')} className="bg-gradient-to-br from-rose-500 to-orange-500 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-rose-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="activity" size={24} /></div><h3 className="font-bold text-lg">Metrónomo</h3><p className="text-xs opacity-90 mt-1">Speed Trainer</p></div><div onClick={() => setView('pads')} className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-blue-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="layers" size={24} /></div><h3 className="font-bold text-lg">Worship Pads</h3><p className="text-xs opacity-90 mt-1">Ambiente continuo</p></div><div onClick={() => setView('looper')} className="bg-gradient-to-br from-teal-500 to-emerald-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-teal-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="repeat" size={24} /></div><h3 className="font-bold text-lg">Jam Looper</h3><p className="text-xs opacity-90 mt-1">Graba & Toca encima</p></div><div onClick={() => setView('recorder')} className="bg-gradient-to-br from-red-500 to-pink-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-red-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="mic" size={24} /></div><h3 className="font-bold text-lg">Grabadora</h3><p className="text-xs opacity-90 mt-1">Ideas & Riffs</p></div></div></div>
-                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Entrenamiento</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('routine')} className="bg-gradient-to-br from-amber-500 to-yellow-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-amber-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="zap" size={24} /></div><h3 className="font-bold text-lg">Rutinas</h3><p className="text-xs opacity-90 mt-1">Eléctrica</p></div><div onClick={() => setView('scales')} className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-emerald-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="grid" size={24} /></div><h3 className="font-bold text-lg">Escalas</h3><p className="text-xs opacity-90 mt-1">Mástil & Tríadas</p></div><div onClick={() => setView('ear')} className="bg-gradient-to-br from-fuchsia-500 to-pink-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-fuchsia-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="ear" size={24} /></div><h3 className="font-bold text-lg">Oído</h3><p className="text-xs opacity-90 mt-1">Entrenador</p></div></div></div>
-                                    <div><h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Conocimiento</h3><div className="grid grid-cols-2 md:grid-cols-3 gap-4"><div onClick={() => setView('analyze')} className="bg-gradient-to-br from-violet-500 to-fuchsia-600 p-6 rounded-3xl shadow-2xl backdrop-blur-sm shadow-violet-500/20 cursor-pointer hover:scale-[1.02] transition-transform text-white"><div className="mb-3 opacity-80"><Icon name="analyze" size={24} /></div><h3 className="font-bold text-lg">Teoría</h3><p className="text-xs opacity-90 mt-1">Analizador</p></div></div></div>
+
+{view === 'home' && (
+                                <div className="space-y-10 py-8">
+                                    <div className="text-center space-y-5">
+                                        <h1 className="flex flex-wrap justify-center gap-x-3 text-4xl md:text-5xl font-extrabold text-slate-800 dark:text-white">
+                                            <span>Guitar</span><span className="text-brand-600">Worship</span><span>Trainer</span>
+                                        </h1>
+                                        <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-lg">Tu compañero de ensayo todo en uno.</p>
+                                        <div className="max-w-md mx-auto mt-6"><ProgressStats key={updateTrigger} /></div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Herramientas</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div onClick={() => setView('tuner')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-indigo-500/90 to-purple-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-indigo-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="mic" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="mic" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Afinador</h3><p className="text-xs text-indigo-100 font-medium mt-1">Cromático</p>
+                                            </div>
+                                            <div onClick={() => setView('tracks')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-violet-500/90 to-fuchsia-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-violet-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="music" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="music" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Pistas & Songs</h3><p className="text-xs text-violet-100 font-medium mt-1">Player y Letras</p>
+                                            </div>
+                                            <div onClick={() => setView('metronome')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-rose-500/90 to-orange-500/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-rose-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="activity" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="activity" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Metrónomo</h3><p className="text-xs text-rose-100 font-medium mt-1">Speed Trainer</p>
+                                            </div>
+                                            <div onClick={() => setView('pads')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-blue-500/90 to-indigo-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-blue-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="layers" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="layers" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Worship Pads</h3><p className="text-xs text-blue-100 font-medium mt-1">Ambiente continuo</p>
+                                            </div>
+                                            <div onClick={() => setView('looper')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-teal-500/90 to-emerald-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-teal-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="repeat" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="repeat" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Jam Looper</h3><p className="text-xs text-teal-100 font-medium mt-1">Graba & Toca</p>
+                                            </div>
+                                            <div onClick={() => setView('recorder')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-pink-500/90 to-rose-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-pink-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="mic" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="mic" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Grabadora</h3><p className="text-xs text-pink-100 font-medium mt-1">Ideas & Riffs</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Entrenamiento</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div onClick={() => setView('routine')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-amber-500/90 to-yellow-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-amber-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="zap" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="zap" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Rutinas</h3><p className="text-xs text-amber-100 font-medium mt-1">Eléctrica</p>
+                                            </div>
+                                            <div onClick={() => setView('scales')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-emerald-500/90 to-teal-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-emerald-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="grid" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="grid" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Escalas</h3><p className="text-xs text-emerald-100 font-medium mt-1">Mástil & Tríadas</p>
+                                            </div>
+                                            <div onClick={() => setView('ear')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-fuchsia-500/90 to-pink-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-fuchsia-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="ear" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="ear" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Oído</h3><p className="text-xs text-fuchsia-100 font-medium mt-1">Entrenador</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-4 px-1">Conocimiento</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                            <div onClick={() => setView('analyze')} className="relative overflow-hidden p-6 rounded-3xl cursor-pointer group hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-violet-500/90 to-fuchsia-600/90 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-violet-500/20 text-white">
+                                                <div className="absolute -right-4 -top-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 rotate-12 scale-150"><Icon name="analyze" size={100} /></div>
+                                                <div className="mb-4 bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 group-hover:scale-110 transition-transform"><Icon name="analyze" size={24} /></div>
+                                                <h3 className="font-bold text-lg tracking-wide">Teoría</h3><p className="text-xs text-violet-100 font-medium mt-1">Analizador & Más</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
+                            
+
                             {view === 'settings' && <SettingsPanel darkMode={darkMode} setDarkMode={setDarkMode} onClose={() => setView('home')} />}
                             {view === 'tuner' && <Tuner />}
                             {view === 'tracks' && <TrackTrainer />}
