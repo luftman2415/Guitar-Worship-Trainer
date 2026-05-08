@@ -750,30 +750,106 @@ const DelayCalculator = () => {
             );
         };
 
-        const CapoCalculator = () => {
-
-
-
-            const [originalKey, setOriginalKey] = useState('C');
+     
+      const CapoCalculator = () => {
+            const[originalKey, setOriginalKey] = useState('C');
             const [targetShape, setTargetShape] = useState('G');
+            const [progression, setProgression] = useState('');
+            
+            // Lista extendida para facilitar cálculos
             const KEYS =["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
-            const calculateCapo = () => { const oIndex = KEYS.indexOf(originalKey); const tIndex = KEYS.indexOf(targetShape); let diff = oIndex - tIndex; if (diff < 0) diff += 12; return diff; };
+            
+            const calculateCapo = () => {
+                const oIndex = KEYS.indexOf(originalKey);
+                const tIndex = KEYS.indexOf(targetShape);
+                let diff = oIndex - tIndex;
+                if (diff < 0) diff += 12;
+                return diff;
+            };
             const capoPos = calculateCapo();
+
+            // Lógica inteligente para transponer tolerando minúsculas
+            const transposeChord = (chord, diff) => {
+                const match = chord.match(/^([a-gA-G][#b]?)(.*)$/);
+                if (!match) return chord;
+                // Forzamos a que la raíz (C, D, E) sea siempre mayúscula y sostenidos/bemoles correctos
+                let root = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase(); 
+                let rest = match[2]; // El resto (m, sus4, maj7) se queda igual
+                
+                const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
+                let searchRoot = flatMap[root] || root;
+                let rootIdx = KEYS.indexOf(searchRoot);
+                if (rootIdx === -1) return chord;
+                let newIdx = (rootIdx + diff) % 12;
+                if (newIdx < 0) newIdx += 12;
+                return KEYS[newIdx] + rest;
+            };
+
+            const getTransposedText = () => {
+                if (!progression) return '';
+                const oIndex = KEYS.indexOf(originalKey);
+                const tIndex = KEYS.indexOf(targetShape);
+                let diff = tIndex - oIndex; // Transposición invertida para saber qué tocar con Capo
+                
+                // Dividimos el texto respetando los espacios, guiones y saltos de línea
+                const tokens = progression.split(/([\s\n-]+)/);
+                return tokens.map((token) => {
+                    // Validamos si la palabra parece un acorde (agregamos 'i' al final para que ignore mayúsculas/minúsculas)
+                    if (/^[A-G][#b]?(m|dim|aug|sus\d|add\d|maj\d|\d)*$/i.test(token)) {
+                        return transposeChord(token, diff);
+                    }
+                    return token;
+                }).join('');
+            };
+
             return (
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-md mx-auto animate-fade-in text-center">
                     <h2 className="text-2xl font-bold mb-6 dark:text-white">Calculadora de Capo</h2>
                     <div className="flex gap-4 mb-8">
-                        <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-2">Original</label><select value={originalKey} onChange={e => setOriginalKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">{KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tono Original</label>
+                            <select value={originalKey} onChange={e => setOriginalKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">
+                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                            </select>
+                        </div>
                         <div className="flex items-center justify-center pt-6 text-slate-300"><Icon name="arrowLeft" size={24} className="rotate-180"/></div>
-                        <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-2">Tocar en</label><select value={targetShape} onChange={e => setTargetShape(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">{KEYS.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                        <div className="flex-1">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Quiero tocar en</label>
+                            <select value={targetShape} onChange={e => setTargetShape(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 text-center appearance-none">
+                                {KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                            </select>
+                        </div>
                     </div>
-                    <div className="bg-brand-50 dark:bg-brand-900/20 p-6 rounded-2xl border border-brand-100 dark:border-brand-800"><p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-2">Capo en</p><div className="text-6xl font-black text-brand-600 dark:text-white mb-2">{capoPos === 0 ? '0' : capoPos}</div><p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{capoPos === 0 ? 'Sin Capo' : `Traste ${capoPos}`}</p></div>
+                    
+                    <div className="bg-brand-50 dark:bg-brand-900/20 p-6 rounded-2xl border border-brand-100 dark:border-brand-800 mb-8">
+                        <p className="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-widest mb-2">Coloca el Capo en</p>
+                        <div className="text-6xl font-black text-brand-600 dark:text-white mb-2">{capoPos === 0 ? '0' : capoPos}</div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            {capoPos === 0 ? 'Sin Capo' : `Traste ${capoPos}`}
+                        </p>
+                    </div>
+
+                    <div className="text-left border-t border-slate-100 dark:border-slate-700 pt-6">
+                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-3"><Icon name="edit" size={14}/> Transponer Progresión</label>
+                        <textarea 
+                            value={progression} 
+                            onChange={(e) => setProgression(e.target.value)} 
+                            placeholder="Pega o escribe los acordes aquí (Ej: f c g am)" 
+                            className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-sm dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-brand-500 mb-4 resize-none h-24"
+                        ></textarea>
+                        
+                        <div className="relative p-5 bg-gradient-to-br from-brand-600 to-indigo-700 text-white rounded-2xl shadow-lg shadow-brand-500/30 min-h-[6rem] overflow-hidden">
+                            <p className="text-[10px] font-bold uppercase tracking-widest mb-2 text-brand-200">Acordes a tocar (Con Capo)</p>
+                            <pre className="font-mono text-lg font-bold whitespace-pre-wrap">{getTransposedText() || '...'}</pre>
+                            <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 scale-150 pointer-events-none"><Icon name="music" size={80}/></div>
+                        </div>
+                    </div>
                 </div>
             );
         };
 
         const NashvilleTranslator = () => {
-            const [key, setKey] = useState('C'); const [input, setInput] = useState('');
+            const[key, setKey] = useState('C'); const[input, setInput] = useState('');
             const majorScale =[0, 2, 4, 5, 7, 9, 11]; const degrees =['1', '2m', '3m', '4', '5', '6m', '7dim'];
             const translate = () => {
                 if(!input.trim()) return '';
@@ -782,20 +858,20 @@ const DelayCalculator = () => {
                 const tokens = input.split(/[\s,-]+/);
                 return tokens.map(token => {
                     if (!token) return '';
-                    const numMatch = token.match(/^([1-7])(m|dim)?(.*)$/);
+                    const numMatch = token.match(/^([1-7])(m|dim)?(.*)$/i);
                     if (numMatch) {
-                        const degree = parseInt(numMatch[1]) - 1; let chord = scaleNotes[degree]; let quality = numMatch[2] || '';
+                        const degree = parseInt(numMatch[1]) - 1; let chord = scaleNotes[degree]; let quality = numMatch[2] ? numMatch[2].toLowerCase() : '';
                         if(quality==='' &&['2m','3m','6m'].includes(degrees[degree])) quality='m';
                         if(quality==='' && degree===6) quality='dim';
                         return chord + quality + (numMatch[3]||'');
                     }
-                    const chordMatch = token.match(/^([A-G][#b]?)(m|dim)?(.*)$/);
+                    const chordMatch = token.match(/^([a-gA-G][#b]?)(m|dim)?(.*)$/i);
                     if (chordMatch) {
-                        let chordRoot = chordMatch[1];
+                        let chordRoot = chordMatch[1].charAt(0).toUpperCase() + chordMatch[1].slice(1).toLowerCase();
                         const flatMap = { 'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#' };
                         if (flatMap[chordRoot]) chordRoot = flatMap[chordRoot];
                         const idx = scaleNotes.indexOf(chordRoot);
-                        if(idx !== -1) return (idx+1) + (chordMatch[2]||(degrees[idx].includes('m')?'m':'')) + (chordMatch[3]||'');
+                        if(idx !== -1) return (idx+1) + (chordMatch[2] ? chordMatch[2].toLowerCase() : (degrees[idx].includes('m')?'m':'')) + (chordMatch[3]||'');
                     }
                     return token;
                 }).join(' - ');
@@ -806,7 +882,7 @@ const DelayCalculator = () => {
                     <h2 className="text-2xl font-bold mb-2 dark:text-white">Sistema Nashville</h2>
                     <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Traduce entre Acordes y Números (Ej: 1, 4, 5)</p>
                     <div className="mb-6 text-left"><label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Tono de la canción</label><select value={key} onChange={e=>setKey(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-bold text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500">{NOTES.map(n=><option key={n} value={n}>{n}</option>)}</select></div>
-                    <div className="text-left mb-6"><label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Ingresa Acordes o Números</label><input type="text" placeholder="Ej: C F G o 1 4 5" value={input} onChange={e=>setInput(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"/></div>
+                    <div className="text-left mb-6"><label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Ingresa Acordes o Números</label><input type="text" placeholder="Ej: c f g am o 1 4 5 6m" value={input} onChange={e=>setInput(e.target.value)} className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-lg dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"/></div>
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800 min-h-[100px] flex flex-col justify-center"><p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-2">Traducción</p><div className="text-2xl font-black text-blue-700 dark:text-white font-mono tracking-widest">{translate() || '...'}</div></div>
                 </div>
             );
