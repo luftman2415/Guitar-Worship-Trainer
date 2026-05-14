@@ -24,7 +24,7 @@
     <!-- Fuente -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <script>
+<script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -34,44 +34,22 @@
                     }
                 }
             }
-        }
+        };
 
-        
-      // SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA SEGURO
-        const APP_VERSION = '2.5.0'; 
-        if (localStorage.getItem('gwt_version') !== APP_VERSION) {
-            localStorage.setItem('gwt_version', APP_VERSION);
-            // Eliminamos la caché y al trabajador viejo
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for(let reg of registrations) reg.unregister();
-                });
-            }
-            if ('caches' in window) {
-                caches.keys().then(names => { names.forEach(name => caches.delete(name)); });
-            }
-            // Esperamos 1 segundo antes de recargar para no cortar las descargas de CSS
-            setTimeout(() => { window.location.reload(); }, 1000);
-        }
-
+        // EXTERMINADOR DE SERVICE WORKERS Y CACHÉS (Solución definitiva para móviles)
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    reg.onupdatefound = () => {
-                        const installingWorker = reg.installing;
-                        installingWorker.onstatechange = () => {
-                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log("Nueva versión detectada");
-                                setTimeout(() => { window.location.reload(); }, 1000);
-                            }
-                        };
-                    };
-                }).catch(err => console.log('SW registration failed:', err));
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
             });
         }
-
-
-    </script>
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
+            });
+        }
+    </script>   
 
     <style>
         body { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
