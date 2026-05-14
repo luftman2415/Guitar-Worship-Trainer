@@ -37,14 +37,21 @@
         }
 
         
-      // SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA
-        const APP_VERSION = '2.4.0'; // Cambiaremos este número cuando hagamos futuras grandes actualizaciones
+      // SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA SEGURO
+        const APP_VERSION = '2.5.0'; 
         if (localStorage.getItem('gwt_version') !== APP_VERSION) {
             localStorage.setItem('gwt_version', APP_VERSION);
+            // Eliminamos la caché y al trabajador viejo
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for(let reg of registrations) reg.unregister();
+                });
+            }
             if ('caches' in window) {
                 caches.keys().then(names => { names.forEach(name => caches.delete(name)); });
             }
-            window.location.reload(true);
+            // Esperamos 1 segundo antes de recargar para no cortar las descargas de CSS
+            setTimeout(() => { window.location.reload(); }, 1000);
         }
 
         if ('serviceWorker' in navigator) {
@@ -54,8 +61,8 @@
                         const installingWorker = reg.installing;
                         installingWorker.onstatechange = () => {
                             if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log("Nueva versión detectada, recargando...");
-                                window.location.reload();
+                                console.log("Nueva versión detectada");
+                                setTimeout(() => { window.location.reload(); }, 1000);
                             }
                         };
                     };
