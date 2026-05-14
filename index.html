@@ -388,7 +388,7 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 ); 
             };
             
-            const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
+const TrackPlayerDetail = ({ song, onBack, onEdit, onUpdateSong }) => {
                 const[audioUrl, setAudioUrl] = useState(null); 
                 const [isPlaying, setIsPlaying] = useState(false); 
                 const[speed, setSpeed] = useState(1.0); 
@@ -399,7 +399,8 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 const[duration, setDuration] = useState(0); 
                 const [zoomedChord, setZoomedChord] = useState(null); 
                 
-                const [contentView, setContentView] = useState('lyrics'); // 'lyrics', 'tabs', 'speeds'
+                // Ahora solo alternamos entre letras y tabs
+                const [contentView, setContentView] = useState('lyrics'); 
                 
                 const [bookmarks, setBookmarks] = useState(song.bookmarks || []);
                 const[trainerMode, setTrainerMode] = useState(false);
@@ -414,8 +415,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                 useEffect(() => { loopEndRef.current = loopEnd; }, [loopEnd]);
                 useEffect(() => { trainerModeRef.current = trainerMode; },[trainerMode]);
                 useEffect(() => { isPlayingRef.current = isPlaying; },[isPlaying]);
-                
-                useEffect(() => { if(!song.isTeacher && contentView === 'speeds') setContentView('lyrics'); },[song, contentView]);
 
                 useEffect(() => { const loadAudio = async () => { if (song.isTeacher) { setAudioUrl(`./tracks/${song.filename}`); } else if (song.hasAudio) { const url = await getSongAudio(song.id); if (url) setAudioUrl(url); } }; loadAudio(); return () => { if(audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl); }; }, [song]);
                 
@@ -561,10 +560,6 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                     <div className="flex gap-2 overflow-x-auto no-scrollbar border-b border-slate-100 dark:border-slate-700 pb-3 mb-4">
                         <button onClick={()=>setContentView('lyrics')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap ${contentView === 'lyrics' ? 'bg-slate-200 dark:bg-slate-700 dark:text-white' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>Letra y Acordes</button>
                         <button onClick={()=>setContentView('tabs')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'tabs' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="file" size={14}/> Tablatura / Notas</button>
-                        
-                        {song.isTeacher && (
-                            <button onClick={()=>setContentView('speeds')} className={`text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1 whitespace-nowrap ${contentView === 'speeds' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}><Icon name="music" size={14}/> Pistas de Estudio</button>
-                        )}
                     </div>
 
                     {contentView === 'lyrics' && (
@@ -583,52 +578,9 @@ const ChordDisplay = ({ chord, size = "small", onClick }) => {
                             )}
                         </div>
                     )}
-
-                    {contentView === 'speeds' && song.isTeacher && (
-                        <div className="pb-24 animate-fade-in">
-                            <div className="text-center mb-6">
-                                <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 text-rose-600 mx-auto rounded-full flex items-center justify-center mb-3"><Icon name="music" size={24} /></div>
-                                <h3 className="text-lg font-bold dark:text-white">Audios Oficiales de Práctica</h3>
-                                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">Pistas ralentizadas en calidad de estudio (En construcción).</p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-rose-500 group transition-all text-left">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-2xl font-black text-rose-600 dark:text-rose-400">100%</div>
-                                        <div><p className="text-sm font-bold dark:text-white">Velocidad Original</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Normal</p></div>
-                                    </div>
-                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-rose-500 transition-colors" />
-                                </button>
-                                
-                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-orange-500 group transition-all text-left">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-2xl font-black text-orange-500 dark:text-orange-400">95%</div>
-                                        <div><p className="text-sm font-bold dark:text-white">Ligeramente Lento</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Ensayo</p></div>
-                                    </div>
-                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-orange-500 transition-colors" />
-                                </button>
-                                
-                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-amber-500 group transition-all text-left">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-2xl font-black text-amber-500 dark:text-amber-400">90%</div>
-                                        <div><p className="text-sm font-bold dark:text-white">Moderado</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Estudio</p></div>
-                                    </div>
-                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-amber-500 transition-colors" />
-                                </button>
-
-                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl hover:border-emerald-500 group transition-all text-left">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-2xl font-black text-emerald-500 dark:text-emerald-400">85%</div>
-                                        <div><p className="text-sm font-bold dark:text-white">Muy Lento</p><p className="text-[10px] text-slate-500 uppercase tracking-widest">Detalle</p></div>
-                                    </div>
-                                    <Icon name="play" size={20} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div></div>); 
             };
+
 
              if (view === 'editor') return <SongEditor song={currentSong} onSave={saveSong} onCancel={() => currentSong.id ? setView('detail') : setView('list')} />;
              if (view === 'detail') return <TrackPlayerDetail song={currentSong} onBack={() => setView('list')} onEdit={() => setView('editor')} onUpdateSong={(updatedSong) => { 
