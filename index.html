@@ -36,19 +36,31 @@
             }
         };
 
-        // EXTERMINADOR DE SERVICE WORKERS Y CACHÉS (Solución definitiva para móviles)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister();
+       // NUCLEAR CLEANUP & HARD REFRESH (Solución definitiva para móviles 2024)
+        (function() {
+            const CLEAN_VERSION = "2.2.1"; // Cambia esto si vuelves a tener problemas de caché
+            
+            async function purgeAndReload() {
+                // 1. Desregistrar Service Workers
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let r of registrations) await r.unregister();
                 }
-            });
-        }
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                for (let name of names) caches.delete(name);
-            });
-        }
+                // 2. Limpiar todos los cachés de archivos
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let k of keys) await caches.delete(k);
+                }
+                // 3. Marcar como limpio y forzar recarga de red
+                sessionStorage.setItem('gwt_cleaned', CLEAN_VERSION);
+                window.location.reload(true);
+            }
+
+            if (sessionStorage.getItem('gwt_cleaned') !== CLEAN_VERSION) {
+                purgeAndReload();
+            }
+        })();
+
     </script>   
 
     <style>
