@@ -34,13 +34,17 @@
                     }
                 }
             }
-        }
-        
+        };
+
+        // LIMPIADOR AUTOMÁTICO: Obliga a los teléfonos de tus alumnos a borrar la versión vieja y descargar la nueva.
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
             });
         }
+        
     </script>
 
     <style>
