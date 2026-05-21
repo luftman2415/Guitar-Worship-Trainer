@@ -1370,10 +1370,113 @@ const DelayCalculator = () => {
                 </div>
             ); 
         };        
+        
+         const PracticeRoutine = () => { 
+            const [view, setView] = useState('landing'); 
+            const [currentExercise, setCurrentExercise] = useState(null); 
+            const [timer, setTimer] = useState(0); 
+            const [isActive, setIsActive] = useState(false); 
+            const [customTime, setCustomTime] = useState(5); 
+            const intervalRef = useRef(null); 
+            
+            // EJERCICIOS COMPLETOS CON TABLATURAS E INSTRUCCIONES
+            const EXERCISES = [
+                { 
+                    id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Independencia de dedos y púa alterna.", defaultTime: 5,
+                    instruction: "Usa un dedo por traste (1=Índice, 2=Medio, 3=Anular, 4=Meñique). Usa púa alterna (Abajo, Arriba) estrictamente. Trata de no levantar los dedos del diapasón más de lo necesario, mantenlos pegados a las cuerdas.",
+                    tab: "e|-----------------------------------------1-2-3-4--\nB|---------------------------------1-2-3-4----------\nG|-------------------------1-2-3-4------------------\nD|-----------------1-2-3-4--------------------------\nA|---------1-2-3-4----------------------------------\nE|-1-2-3-4------------------------------------------"
+                }, 
+                { 
+                    id: 2, category: "TÉCNICA", name: "Bending Preciso", desc: "Afinación correcta al estirar la cuerda.", defaultTime: 5,
+                    instruction: "Toca el traste 9 (tu nota objetivo), luego haz un bending desde el traste 7 intentando igualar ese mismo tono. Apoya tu dedo anular usando la fuerza del medio y el índice. Gira la muñeca, no empujes solo con los dedos.",
+                    tab: "   (Escucha)  (Iguala el tono)\ne|----------------------------\nB|----------------------------\nG|----9----------7b9----------\nD|----------------------------\nA|----------------------------\nE|----------------------------"
+                }, 
+                { 
+                    id: 3, category: "WORSHIP", name: "Tríadas Mayores (1-2-3)", desc: "Figuras esenciales para ambiente y arreglos.", defaultTime: 10,
+                    instruction: "Estas son las 3 inversiones de Sol Mayor (G) en las cuerdas agudas. El 90% de los arreglos worship usan estas formas combinadas con efectos de Delay y Reverb. Apréndelas y muévelas por el mástil.",
+                    tab: "   (Raíz)   (1ra Inv)  (2da Inv)\ne|---3---------7----------10----\nB|---3---------8----------12----\nG|---4---------7----------12----\nD|------------------------------\nA|------------------------------\nE|------------------------------"
+                }, 
+                { 
+                    id: 4, category: "ESCALAS", name: "Pentatónica Menor (Caja 1)", desc: "La caja principal para construir solos.", defaultTime: 10,
+                    instruction: "Posición de La Menor (Am) en el traste 5. Toca de ida y vuelta usando el metrónomo de la app. Presta atención a que cada nota suene limpia y sin ruidos de otras cuerdas.",
+                    tab: "e|---------------------------5-8--\nB|----------------------5-8-------\nG|-----------------5-7------------\nD|------------5-7-----------------\nA|-------5-7----------------------\nE|--5-8---------------------------"
+                }, 
+                { 
+                    id: 5, category: "RITMO", name: "Corcheas con Palm Mute", desc: "Control de mano derecha y limpieza.", defaultTime: 5,
+                    instruction: "Apoya el borde carnoso de tu mano derecha sobre el puente (donde nacen las cuerdas) para mutearlas. Toca corcheas constantes. Busca un sonido ahogado pero que tenga tono musical (chug).",
+                    tab: "   PM.................................\ne|------------------------------------\nB|------------------------------------\nG|------------------------------------\nD|--5-5-5-5-5-5-5-5-------------------\nA|--5-5-5-5-5-5-5-5-(Repetir)---------\nE|--3-3-3-3-3-3-3-3-------------------"
+                }
+            ]; 
+            
+            useEffect(() => { 
+                if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } 
+                else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } 
+                return () => clearInterval(intervalRef.current); 
+            }, [isActive, timer]); 
+            
+            const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; 
+            const toggleTimer = () => setIsActive(!isActive); 
+            const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; 
+            const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; 
+            const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; 
+            
+            if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Gimnasio de Guitarra</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada con tabs e instrucciones paso a paso.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Empezar a Calentar</button></div>); 
+            
+            if (view === 'list') return (<div className="max-w-2xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600 dark:hover:text-white px-3 py-2 bg-slate-100 dark:bg-slate-800 rounded-lg">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Entrenar</button></div>))}</div></div>); 
+            
+            return (
+                <div className="max-w-4xl mx-auto animate-fade-in space-y-6">
+                    <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700">
+                        <button onClick={() => setView('list')} className="p-3 bg-slate-100 dark:bg-slate-700 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-slate-600 dark:text-white shrink-0"><Icon name="arrowLeft" size={20} /></button>
+                        <div>
+                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest block mb-1">{currentExercise.category}</span>
+                            <h2 className="text-xl sm:text-2xl font-black dark:text-white leading-none">{currentExercise.name}</h2>
+                        </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Panel Izquierdo: INSTRUCCIONES Y TABS */}
+                        <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col">
+                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Icon name="book" size={16}/> Instrucciones</h3>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 mb-8 leading-relaxed">{currentExercise.instruction}</p>
+                            
+                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Icon name="grid" size={16}/> Tablatura</h3>
+                            <div className="bg-[#1e1e1e] p-4 rounded-2xl shadow-inner overflow-x-auto w-full custom-scrollbar">
+                                <pre className="font-mono text-xs sm:text-sm text-emerald-400">{currentExercise.tab}</pre>
+                            </div>
+                        </div>
 
+                        {/* Panel Derecho: EL CRONÓMETRO */}
+                        <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center">
+                            <div className="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto mb-8 flex items-center justify-center">
+                                <div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div>
+                                <div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div>
+                                <div className="flex flex-col items-center z-10">
+                                    <span className="text-5xl sm:text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>
+                                    {!isActive && (
+                                        <div className="flex gap-4 mt-4">
+                                            <button onClick={() => adjustTime(-1)} className="p-2 text-slate-400 bg-slate-100 dark:bg-slate-700 rounded-lg hover:text-indigo-500"><Icon name="minus" size={16}/></button>
+                                            <span className="text-sm font-bold text-slate-500 flex items-center">{customTime} min</span>
+                                            <button onClick={() => adjustTime(1)} className="p-2 text-slate-400 bg-slate-100 dark:bg-slate-700 rounded-lg hover:text-indigo-500"><Icon name="plus" size={16}/></button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-4 justify-center w-full max-w-[200px]">
+                                <button onClick={toggleTimer} className={`flex-[2] h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                                    <Icon name={isActive ? "pause" : "play"} size={28} fill="currentColor" />
+                                </button>
+                                <button onClick={resetTimer} className="flex-1 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                                    <Icon name="repeat" size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ); 
+        };
                 
-const PracticeRoutine = () => { const [view, setView] = useState('landing'); const [currentExercise, setCurrentExercise] = useState(null); const [timer, setTimer] = useState(0); const [isActive, setIsActive] = useState(false); const [customTime, setCustomTime] = useState(5); const intervalRef = useRef(null); const EXERCISES = [{ id: 1, category: "CALENTAMIENTO", name: "Spider Walk (1-2-3-4)", desc: "Dedo por traste en todas las cuerdas. Ida y vuelta.", defaultTime: 5 }, { id: 2, category: "TÉCNICA", name: "Bending y Vibrato", desc: "Bend de tono completo. Vibrato lento y controlado.", defaultTime: 10 }, { id: 3, category: "RITMO", name: "Funk Strumming (Muting)", desc: "Mano izquierda muda cuerdas. Ritmo semicorcheas.", defaultTime: 10 }, { id: 4, category: "TEORÍA", name: "Escala Mayor (3 Octavas)", desc: "Círculo de cuartas. Todas las posiciones.", defaultTime: 15 }, { id: 5, category: "REPERTORIO", name: "Repaso Canciones", desc: "Tocar setlist completo sin detenerse.", defaultTime: 20 }]; useEffect(() => { if (isActive && timer > 0) { intervalRef.current = setInterval(() => setTimer(t => t - 1), 1000); } else if (timer === 0) { setIsActive(false); if(intervalRef.current) clearInterval(intervalRef.current); } return () => clearInterval(intervalRef.current); }, [isActive, timer]); const startExercise = (ex) => { setCurrentExercise(ex); setCustomTime(ex.defaultTime); setTimer(ex.defaultTime * 60); setIsActive(false); setView('active'); }; const toggleTimer = () => setIsActive(!isActive); const resetTimer = () => { setIsActive(false); setTimer(customTime * 60); }; const adjustTime = (delta) => { const newTime = Math.max(1, customTime + delta); setCustomTime(newTime); if (!isActive) setTimer(newTime * 60); }; const formatTime = (seconds) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`; }; if (view === 'landing') return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><div className="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="zap" size={48} /></div><h2 className="text-2xl font-bold mb-4 dark:text-white">Generador de Rutinas</h2><p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">Genera una sesión equilibrada: Calentamiento + Técnica + Ritmo.</p><button onClick={() => setView('list')} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 transition-all w-full">Generar Nueva Rutina</button></div>); if (view === 'list') return (<div className="max-w-xl mx-auto space-y-6 animate-fade-in"><div className="flex justify-between items-center px-2"><h2 className="text-2xl font-bold dark:text-white">Tu Rutina de Hoy</h2><button onClick={() => setView('landing')} className="text-xs text-slate-400 font-bold hover:text-slate-600">Salir</button></div><div className="space-y-4">{EXERCISES.map((ex) => (<div key={ex.id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"><div><span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 block">{ex.category}</span><h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{ex.name}</h3><p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">{ex.desc}</p></div><button onClick={() => startExercise(ex)} className="bg-slate-900 dark:bg-slate-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-600 transition-colors shrink-0">Practicar</button></div>))}</div></div>); return (<div className="max-w-md mx-auto bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 text-center animate-fade-in"><button onClick={() => setView('list')} className="absolute top-6 left-6 p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 hover:text-slate-800"><Icon name="arrowLeft" size={20} /></button><span className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-2 block mt-2">{currentExercise.category}</span><h2 className="text-2xl font-black mb-2 dark:text-white">{currentExercise.name}</h2><p className="text-sm text-slate-500 dark:text-slate-400 mb-8">{currentExercise.desc}</p><div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center"><div className="absolute inset-0 rounded-full border-8 border-slate-100 dark:border-slate-700"></div><div className={`absolute inset-0 rounded-full border-8 border-indigo-500 transition-all duration-1000 ${isActive ? 'opacity-100' : 'opacity-30'}`} style={{ clipPath: `inset(0 0 ${100 - (timer / (customTime * 60) * 100)}% 0)` }}></div><div className="flex flex-col items-center z-10"><span className="text-6xl font-black font-mono text-slate-800 dark:text-white tracking-tighter">{formatTime(timer)}</span>{!isActive && <div className="flex gap-4 mt-2"><button onClick={() => adjustTime(-1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="minus" size={16}/></button><span className="text-xs font-bold text-slate-500">{customTime} min</span><button onClick={() => adjustTime(1)} className="p-1 text-slate-400 hover:text-indigo-500"><Icon name="plus" size={16}/></button></div>}</div></div><div className="flex gap-4 justify-center"><button onClick={toggleTimer} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${isActive ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}><Icon name={isActive ? "pause" : "play"} size={32} fill="currentColor" /></button><button onClick={resetTimer} className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-600"><Icon name="repeat" size={24} /></button></div></div>); };
          const SettingsPanel = ({ darkMode, setDarkMode, onClose }) => {
             const dialog = useDialog(); // Usamos el sistema de diálogo de la app
 
