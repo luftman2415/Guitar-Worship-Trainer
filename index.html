@@ -162,11 +162,11 @@
                 check: <polyline points="20 6 9 17 4 12"></polyline>,
                 rewind: <g><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></g>,
                 arrowLeft: <g><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></g>,
-                volume: <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></g>
+                volume: <g><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></g>,
+                tablature: <g><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="17" x2="22" y2="17"></line><circle cx="7" cy="12" r="2.5" fill="currentColor"></circle><circle cx="17" cy="7" r="2.5" fill="currentColor"></circle></g>
             };
             return (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{icons[name] || <circle cx="12" cy="12" r="10" />}</svg>);
-        };        
-
+        };
 
         // --- UTILS DE BASE DE DATOS (IndexedDB) ---
         const DB_NAME = 'gwt_audio_db'; const DB_STORE = 'recordings';
@@ -1365,16 +1365,97 @@ const DelayCalculator = () => {
                 </div>
             );
         };
+         
+       const TabTransposer = () => {
+            const [tabs, setTabs] = useState('');
+            const [semitones, setSemitones] = useState(0);
+            const textareaRef = useRef(null);
+
+            const getTransposedTabs = () => {
+                if (!tabs) return '';
+                if (semitones === 0) return tabs;
+                
+                const tokens = tabs.split(/(cuerdas?\s*\d+|c\s*\d+|strings?\s*\d+)/gi);
+                
+                return tokens.map(token => {
+                    if (/^(cuerdas?|c|strings?)\s*\d+$/i.test(token)) return token;
+                    
+                    // ALGORITMO PERFECCIONADO: Ahora acepta símbolos (), [], {} típicos de tablaturas
+                    return token.replace(/(\d+)(?=[hpsbrv\s\n\-\|()[\]{}]|$)/gi, (match) => {
+                        const newFret = parseInt(match) + semitones;
+                        return newFret < 0 ? 'X' : newFret.toString();
+                    });
+                }).join('');
+            };
+
+            const insertAtCursor = (text) => {
+                const textarea = textareaRef.current;
+                if (!textarea) return;
+                const start = textarea.selectionStart; const end = textarea.selectionEnd;
+                const before = tabs.substring(0, start); const after = tabs.substring(end);
+                const newText = before + text + " " + after;
+                setTabs(newText);
+                setTimeout(() => { textarea.focus(); textarea.setSelectionRange(start + text.length + 1, start + text.length + 1); }, 0);
+            };
+
+            return (
+                <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl border border-slate-200 dark:border-slate-700 max-w-2xl mx-auto animate-fade-in text-center">
+                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6"><Icon name="tablature" size={32} /></div>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Transpositor de Tabs</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Sube o baja de tono tus tablaturas o punteos numéricos.</p>
+                    
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl w-full sm:w-fit mx-auto border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-center gap-4">
+                            <span className="text-xs font-bold text-slate-500 uppercase">Semitonos:</span>
+                            <button onClick={() => setSemitones(s => s - 1)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95 hover:text-emerald-500 transition-colors">-</button>
+                            <span className="text-3xl font-black text-emerald-600 dark:text-white w-16 text-center">{semitones > 0 ? `+${semitones}` : semitones}</span>
+                            <button onClick={() => setSemitones(s => s + 1)} className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow font-bold text-slate-600 dark:text-white active:scale-95 hover:text-emerald-500 transition-colors">+</button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div className="flex flex-col relative">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2"><Icon name="edit" size={14}/> Original</label>
+                                <div className="flex gap-2">
+                                    <button onClick={() => insertAtCursor('cuerda')} className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-[10px] sm:text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1">
+                                        Cuerda
+                                    </button>
+                                    <button onClick={() => insertAtCursor('traste')} className="px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 text-[10px] sm:text-xs font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-1">
+                                        Traste
+                                    </button>
+                                </div>
+                            </div>
+                            <textarea 
+                                ref={textareaRef}
+                                value={tabs} 
+                                onChange={(e) => setTabs(e.target.value)} 
+                                placeholder="Pega tu tab aquí...&#10;Ej: e|---(8)-[10]---&#10;O usa los botones de arriba" 
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-900 rounded-xl font-mono text-sm dark:text-white border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 h-48 custom-scrollbar resize-none"
+                                spellCheck="false"
+                            ></textarea>
+                        </div>
+                        <div className="flex flex-col">
+                            <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-2 h-[26px]"><Icon name="check" size={14}/> Transpuesta</label>
+                            <div className="w-full p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl font-mono text-sm text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 h-48 overflow-y-auto custom-scrollbar whitespace-pre-wrap">
+                                {getTransposedTabs() || 'Esperando tabs...'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };       
 
         const TheoryHub = () => { 
             const [activeTool, setActiveTool] = useState('dictionary'); 
             return (
-                <div className="max-w-4xl mx-auto animate-fade-in">
+                <div className="max-w-5xl mx-auto animate-fade-in">
                     <div className="w-full overflow-x-auto no-scrollbar mb-8 pb-2">
                         <div className="flex sm:justify-center min-w-full px-2">
                             <div className="flex bg-slate-200 dark:bg-slate-800 p-1.5 rounded-2xl shadow-inner mx-auto sm:mx-0 gap-1">
                                 <button onClick={() => setActiveTool('dictionary')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'dictionary' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Diccionario</button>
                                 <button onClick={() => setActiveTool('nashville')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'nashville' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Nashville (Números)</button>
+                                <button onClick={() => setActiveTool('tabs')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'tabs' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Tabs +/-</button>
                                 <button onClick={() => setActiveTool('delay')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'delay' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Delay ms</button>
                                 <button onClick={() => setActiveTool('circle')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'circle' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Círculo 5tas</button>
                                 <button onClick={() => setActiveTool('capo')} className={`px-4 sm:px-6 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-shrink-0 ${activeTool === 'capo' ? 'bg-white dark:bg-slate-600 text-brand-600 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>Capo Calc</button>
@@ -1382,11 +1463,10 @@ const DelayCalculator = () => {
                             </div>
                         </div>
                     </div>
-                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'nashville' ? <NashvilleTranslator /> : activeTool === 'delay' ? <DelayCalculator /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
+                    {activeTool === 'dictionary' ? <ChordDictionary /> : activeTool === 'nashville' ? <NashvilleTranslator /> : activeTool === 'tabs' ? <TabTransposer /> : activeTool === 'delay' ? <DelayCalculator /> : activeTool === 'analyzer' ? <ChordAnalyzer /> : activeTool === 'capo' ? <CapoCalculator /> : <CircleOfFifths />}
                 </div>
             ); 
         };        
-        
 
         const PracticeRoutine = () => { 
             const [view, setView] = useState('landing'); 
@@ -1659,6 +1739,29 @@ const DelayCalculator = () => {
 
          const Footer = () => (<footer className="w-full text-center py-8 text-xs text-slate-400 font-medium">Copyright © 2026 LUFTMANDMAURICIO</footer>);
          
+         // BOTONES MOVIDOS AFUERA PARA EVITAR QUE EL SCROLL SALTE
+         const NavItem = ({ id, icon, label, view, setView, isAction = false, onClick = null }) => { 
+            const active = view === id;
+            const handleClick = () => {
+                if (navigator.vibrate) navigator.vibrate(40);
+                if (onClick) onClick(); else setView(id);
+            };
+            if (isAction) { return (<button onClick={handleClick} className="flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10 active:scale-95"><div className="p-2 rounded-full"><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); } 
+            return (
+                <button onClick={handleClick} className={`flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 active:scale-95 ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+                    <div className={`p-1`}><Icon name={icon} size={24} strokeWidth={active ? 2.5 : 2} /></div>
+                    <span className={`text-[10px] font-bold ${active ? 'text-white' : ''}`}>{label}</span>
+                </button>
+            ); 
+         };
+
+         const PanicButton = () => (
+            <button onClick={() => window.location.reload()} className="flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 group" title="Detener todo">
+                <div className="p-2 rounded-full border-2 border-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors"><Icon name="micOff" size={24} /></div>
+                <span className="text-[9px] font-bold text-red-500">SILENCIO</span>
+            </button>
+         );
+
          const App = () => {
             const [view, setView] = useState('home');
             const [darkMode, setDarkMode] = useState(false);
@@ -1688,71 +1791,50 @@ const DelayCalculator = () => {
             useEffect(() => { darkMode ? document.documentElement.classList.add('dark') : document.documentElement.classList.remove('dark'); }, [darkMode]);
 
             const installApp = async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); const { outcome } = await deferredPrompt.userChoice; if (outcome === 'accepted') { setDeferredPrompt(null); setShowInstall(false); } };
-            
-            const NavItem = ({ id, icon, label, isAction = false, onClick = null }) => { 
-                const active = view === id;
-                const handleClick = () => {
-                    if (navigator.vibrate) navigator.vibrate(40);
-                    if (onClick) onClick(); else setView(id);
-                };
-                if (isAction) { return (<button onClick={handleClick} className="flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/10 active:scale-95"><div className="p-2 rounded-full"><Icon name={icon} size={24} /></div><span className="text-[10px] font-bold">{label}</span></button>); } 
-                return (
-                    <button onClick={handleClick} className={`flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all duration-300 active:scale-95 ${active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 scale-105' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-                        <div className={`p-1`}><Icon name={icon} size={24} strokeWidth={active ? 2.5 : 2} /></div>
-                        <span className={`text-[10px] font-bold ${active ? 'text-white' : ''}`}>{label}</span>
-                    </button>
-                ); 
-            };
-
-            const PanicButton = () => (
-                <button onClick={() => window.location.reload()} className="flex-shrink-0 min-w-[4.5rem] flex flex-col items-center gap-1 p-2 rounded-2xl transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 group" title="Detener todo">
-                    <div className="p-2 rounded-full border-2 border-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors"><Icon name="micOff" size={24} /></div>
-                    <span className="text-[9px] font-bold text-red-500">SILENCIO</span>
-                </button>
-            );
 
             return (
                 <DialogProvider>
                     <div className="min-h-screen pb-24 md:pb-0 md:pl-28 flex flex-col bg-slate-50 dark:bg-slate-950">
+                        {/* --- MENÚ LATERAL PC --- */}
                         <nav className="glass-nav hidden md:flex fixed left-0 top-0 h-screen w-28 border-r border-slate-200/60 dark:border-slate-800/60 flex-col z-50 py-8 items-center shadow-[4px_0_30px_-10px_rgba(0,0,0,0.1)]">
                             <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/30 mb-6 cursor-pointer hover:scale-110 transition-transform duration-300 active:scale-95" onClick={() => setView('home')} title="Ir a Inicio">GW</div>
                             <div className="flex-1 overflow-y-auto w-full px-3 flex flex-col items-center gap-4 no-scrollbar pb-4 pt-2">
-                                <NavItem id="settings" icon="lock" label="Ajustes" />
+                                <NavItem id="settings" icon="lock" label="Ajustes" view={view} setView={setView} />
                                 <div className="w-12 h-[1px] bg-slate-200 dark:bg-slate-700 my-1 shrink-0"></div>
-                                <NavItem id="tuner" icon="mic" label="Afinar" />
-                                <NavItem id="tracks" icon="music" label="Pistas" />
-                                <NavItem id="metronome" icon="activity" label="Tempo" />
-                                <NavItem id="pads" icon="layers" label="Pads" />
+                                <NavItem id="tuner" icon="mic" label="Afinar" view={view} setView={setView} />
+                                <NavItem id="tracks" icon="music" label="Pistas" view={view} setView={setView} />
+                                <NavItem id="metronome" icon="activity" label="Tempo" view={view} setView={setView} />
+                                <NavItem id="pads" icon="layers" label="Pads" view={view} setView={setView} />
                                 <div className="w-12 h-[1px] bg-slate-200 dark:bg-slate-700 my-1 shrink-0"></div>
-                                <NavItem id="looper" icon="repeat" label="Studio" />
-                                <NavItem id="routine" icon="zap" label="Rutinas" />
-                                <NavItem id="scales" icon="grid" label="Escalas" />
-                                <NavItem id="ear" icon="ear" label="Oído" />
-                                <NavItem id="analyze" icon="analyze" label="Teoría" />
+                                <NavItem id="looper" icon="repeat" label="Studio" view={view} setView={setView} />
+                                <NavItem id="routine" icon="zap" label="Rutinas" view={view} setView={setView} />
+                                <NavItem id="scales" icon="grid" label="Escalas" view={view} setView={setView} />
+                                <NavItem id="ear" icon="ear" label="Oído" view={view} setView={setView} />
+                                <NavItem id="analyze" icon="analyze" label="Teoría" view={view} setView={setView} />
                                 {showInstall && <div className="w-12 h-[1px] bg-slate-200 dark:bg-slate-700 my-1"></div>}
                                 <div className="w-12 h-[1px] bg-slate-200 dark:bg-slate-700 my-1 shrink-0"></div>
                                 <PanicButton />
-                                {showInstall && <NavItem id="install" icon="download" label="Instalar" isAction={true} onClick={installApp} />}
+                                {showInstall && <NavItem id="install" icon="download" label="Instalar" isAction={true} onClick={installApp} view={view} setView={setView} />}
                             </div>
                         </nav>
                         
+                        {/* --- MENÚ MÓVIL DESLIZANTE --- */}
                         <nav className="glass-nav md:hidden fixed bottom-0 left-0 w-full border-t border-slate-200/60 dark:border-slate-800/60 z-50 px-2 py-3 flex items-center gap-1 overflow-x-auto no-scrollbar safe-area-pb shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
-                            <NavItem id="home" icon="home" label="Inicio" />
-                            <NavItem id="settings" icon="lock" label="Ajustes" />
+                            <NavItem id="home" icon="home" label="Inicio" view={view} setView={setView} />
+                            <NavItem id="settings" icon="lock" label="Ajustes" view={view} setView={setView} />
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
-                            <NavItem id="tracks" icon="music" label="Pistas" />
-                            <NavItem id="tuner" icon="mic" label="Afinar" />
-                            <NavItem id="metronome" icon="activity" label="Tempo" />
-                            <NavItem id="pads" icon="layers" label="Pads" />
-                            <NavItem id="looper" icon="repeat" label="Studio" />
-                            <NavItem id="routine" icon="zap" label="Rutinas" />
-                            <NavItem id="scales" icon="grid" label="Escalas" />
-                            <NavItem id="ear" icon="ear" label="Oído" />
-                            <NavItem id="analyze" icon="analyze" label="Teoría" />
+                            <NavItem id="tracks" icon="music" label="Pistas" view={view} setView={setView} />
+                            <NavItem id="tuner" icon="mic" label="Afinar" view={view} setView={setView} />
+                            <NavItem id="metronome" icon="activity" label="Tempo" view={view} setView={setView} />
+                            <NavItem id="pads" icon="layers" label="Pads" view={view} setView={setView} />
+                            <NavItem id="looper" icon="repeat" label="Studio" view={view} setView={setView} />
+                            <NavItem id="routine" icon="zap" label="Rutinas" view={view} setView={setView} />
+                            <NavItem id="scales" icon="grid" label="Escalas" view={view} setView={setView} />
+                            <NavItem id="ear" icon="ear" label="Oído" view={view} setView={setView} />
+                            <NavItem id="analyze" icon="analyze" label="Teoría" view={view} setView={setView} />
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
                             <PanicButton />
                         </nav>
-
                         <main className="max-w-5xl mx-auto p-4 md:p-12 pb-32 animate-fade-in flex-grow w-full">
                             <div className="flex justify-between items-center md:hidden mb-6">
                                 <div className="flex items-center gap-2">
