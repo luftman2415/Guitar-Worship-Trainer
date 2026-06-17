@@ -4,39 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Guitar Worship Trainer Pro</title>
-<script>
-        // BOMBA DE LIMPIEZA: Ejecutar antes de que cargue cualquier otra cosa
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister().then(() => console.log('SW Borrado'));
-                }
-            });
-        }
-        if ('caches' in window) {
-            caches.keys().then(function(names) {
-                for (let name of names) caches.delete(name);
-            });
-        }
-    <script>
-        // ELIMINADOR DE FANTASMAS (Nuke total)
-        (function() {
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(regs => {
-                    for(let r of regs) r.unregister();
-                });
-            }
-            if ('caches' in window) {
-                caches.keys().then(names => {
-                    for (let n of names) caches.delete(n);
-                });
-            }
-            // Borra datos de sesión que React Router pudiera haber dejado
-            window.localStorage.clear();
-            window.sessionStorage.clear();
-        })();
-    </script>
-
     <!-- Librerías Externas (Sin caché) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -58,21 +25,21 @@
             }
         };
 
-        // LIMPIADOR AUTOMÁTICO: Obliga a los teléfonos de tus alumnos a borrar la versión vieja y descargar la nueva.
-        // LIMPIEZA TOTAL: Borra fantasmas de apps anteriores y archivos compilados (Vite/React)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for(let r of registrations) r.unregister();
-            });
-        }
-        // Borra la memoria de archivos viejos (como el app-DKKA8w9L.js)
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                for (let name of names) caches.delete(name);
-            });
-        }
-        
-    </script>
+        // LIMPIEZA TOTAL DE FANTASMAS
+        (function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(regs => {
+                    for(let r of regs) r.unregister();
+                });
+            }
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    for (let n of names) caches.delete(n);
+                });
+            }
+            localStorage.clear();
+            sessionStorage.clear();
+        })();
 
     <style>
         body { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
