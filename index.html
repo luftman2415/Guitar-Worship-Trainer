@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Guitar Worship Trainer Pro</title>
+<script>
+        // BOMBA DE LIMPIEZA: Ejecutar antes de que cargue cualquier otra cosa
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister().then(() => console.log('SW Borrado'));
+                }
+            });
+        }
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) caches.delete(name);
+            });
+        }
+    </script>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
