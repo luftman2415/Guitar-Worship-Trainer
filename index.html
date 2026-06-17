@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Guitar Worship Trainer Pro</title>
-    <!-- Librerías Externas (Sin caché) -->
+    <!-- Librerías -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!-- Fuente -->
@@ -18,9 +18,7 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#312e81' }
-                    }
+                    colors: { brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#312e81' } }
                 }
             }
         };
@@ -40,7 +38,7 @@
             localStorage.clear();
             sessionStorage.clear();
         })();
-
+    </script>
     <style>
         body { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -1977,6 +1975,6 @@ const DelayCalculator = () => {
                 <App />
             </ErrorBoundary>
         );
-      </script>
-   </body>
+    </script>
+</body>
 </html>
