@@ -887,6 +887,39 @@ const StudioLooper = () => {
             const [scaleName, setScaleName] = useState('Mayor (Jónica)'); 
             const [activeTab, setActiveTab] = useState('fretboard'); 
             const [fretZone, setFretZone] = useState('all'); // Filtro de Zona
+// Función pedagógica para calcular dinámicamente los trastes de cada Caja
+            const getBoxRange = (boxNum) => {
+                const rootIdx = NOTES.indexOf(root);
+                const eIdx = NOTES.indexOf('E');
+                let R = (rootIdx - eIdx + 12) % 12; // Traste tónica en 6ta cuerda
+                
+                const isMajor = (SCALES[scaleName] || []).includes(4);
+                let start = 0;
+                let end = 0;
+                
+                if (isMajor) {
+                    switch (boxNum) {
+                        case 1: start = R - 1; end = R + 2; break;
+                        case 2: start = R + 2; end = R + 5; break;
+                        case 3: start = R + 4; end = R + 7; break;
+                        case 4: start = R + 7; end = R + 10; break;
+                        case 5: start = R + 9; end = R + 12; break;
+                    }
+                } else {
+                    switch (boxNum) {
+                        case 1: start = R;     end = R + 3; break;
+                        case 2: start = R + 2; end = R + 5; break;
+                        case 3: start = R + 4; end = R + 8; break;
+                        case 4: start = R + 7; end = R + 10; break;
+                        case 5: start = R + 9; end = R + 12; break;
+                    }
+                }
+                
+                if (start < 0) { start += 12; end += 12; }
+                if (end > 22) { start -= 12; end -= 12; }
+                
+                return { start, end };
+            };
             
             const STRINGS = ['E', 'B', 'G', 'D', 'A', 'E']; 
             const { getContext, resume } = useAudioContext(); 
@@ -944,11 +977,12 @@ const StudioLooper = () => {
                         <div className="flex-1"><label className="text-xs font-bold text-slate-500 uppercase ml-1">Zona del Mástil</label>
                             <select value={fretZone} onChange={e => setFretZone(e.target.value)} className="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-700 rounded-xl font-bold dark:text-white shadow-sm outline-none focus:ring-2 focus:ring-brand-500">
                                 <option value="all">Todo el mástil</option>
-                                <option value="0-4">Caja 1: Trastes 0 al 4</option>
-                                <option value="5-8">Caja 2: Trastes 5 al 8</option>
-                                <option value="9-12">Caja 3: Trastes 9 al 12</option>
-                                <option value="13-16">Caja 4: Trastes 13 al 16</option>
-                                <option value="17-22">Caja 5: Trastes 17 al 22</option>
+                                <option value="box1">Caja 1 ({getBoxRange(1).start} al {getBoxRange(1).end})</option>
+                                <option value="box2">Caja 2 ({getBoxRange(2).start} al {getBoxRange(2).end})</option>
+                                <option value="box3">Caja 3 ({getBoxRange(3).start} al {getBoxRange(3).end})</option>
+                                <option value="box4">Caja 4 ({getBoxRange(4).start} al {getBoxRange(4).end})</option>
+                                <option value="box5">Caja 5 ({getBoxRange(5).start} al {getBoxRange(5).end})</option>
+                                <option value="diagonal">Patrón Diagonal (Pentatónica)</option>
                             </select>
                         </div>
                     </div>
@@ -995,20 +1029,57 @@ const StudioLooper = () => {
                                                         const isInScale = noteIndex !== -1;
                                                         const isRoot = noteIndex === 0;
                                                         
-                                                        // Filtro de visibilidad por zona
+                                                        // Filtro de visibilidad dinámico e inteligente
                                                         let isVisible = true;
-                                                        if (fretZone === '0-4' && fret > 4) isVisible = false;
-                                                        if (fretZone === '5-8' && (fret < 5 || fret > 8)) isVisible = false;
-                                                        if (fretZone === '9-12' && (fret < 9 || fret > 12)) isVisible = false;
-                                                        if (fretZone === '13-16' && (fret < 13 || fret > 16)) isVisible = false;
-                                                        if (fretZone === '17-22' && fret < 17) isVisible = false;
+                                                        if (fretZone !== 'all') {
+                                                            if (fretZone === 'diagonal') {
+                                                                const rootIdx = NOTES.indexOf(root);
+                                                                const isMajor = (SCALES[scaleName] || []).includes(4);
+                                                                const adjustedRootIdx = isMajor ? (rootIdx - 3 + 12) % 12 : rootIdx;
+                                                                const eIdx = NOTES.indexOf('E');
+                                                                let R = (adjustedRootIdx - eIdx + 12) % 12;
+                                                                
+                                                                const diagonalOffsets = [
+                                                                    [R + 3, R + 5, R + 7], // 1ra cuerda (e agudo) -> C, D, E (trastes 8, 10, 12) - 3 notas
+                                                                    [R + 3, R + 5],        // 2da cuerda (B)        -> G, A (trastes 8, 10) - 2 notas
+                                                                    [R,     R + 2, R + 4], // 3ra cuerda (G)        -> C, D, E (trastes 5, 7, 9) - 3 notas
+                                                                    [R,     R + 2],        // 4ta cuerda (D)        -> G, A (trastes 5, 7) - 2 notas
+                                                                    [R - 2, R,     R + 2], // 5ta cuerda (A)        -> C, D, E (trastes 3, 5, 7) - 3 notas
+                                                                    [R - 2, R]             // 6ta cuerda (E grave)  -> G, A (trastes 3, 5) - 2 notas
+                                                                ];
+                                                                
+                                                                const allowedOffsets = diagonalOffsets[sIdx] || [];
+                                                                const matchesPrimary = allowedOffsets.some(offset => {
+                                                                    let normOffset = offset;
+                                                                    while (normOffset < 0) normOffset += 12;
+                                                                    while (normOffset >= 12) normOffset -= 12;
+                                                                    return fret === normOffset || fret === normOffset + 12 || fret === normOffset - 12;
+                                                                });
+                                                                
+                                                                if (!matchesPrimary) {
+                                                                    isVisible = false;
+                                                                }
+                                                            } else {
+                                                                const boxNum = fretZone === 'box1' ? 1 : fretZone === 'box2' ? 2 : fretZone === 'box3' ? 3 : fretZone === 'box4' ? 4 : fretZone === 'box5' ? 5 : 0;
+                                                                if (boxNum > 0) {
+                                                                    const { start, end } = getBoxRange(boxNum);
+                                                                    const inPrimary = (fret >= start && fret <= end);
+                                                                    const inLowerOctave = (fret >= start - 12 && fret <= end - 12);
+                                                                    const inHigherOctave = (fret >= start + 12 && fret <= end + 12);
+                                                                    
+                                                                    if (!inPrimary && !inLowerOctave && !inHigherOctave) {
+                                                                        isVisible = false;
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
 
                                                         const dotColor = isInScale ? DEGREE_COLORS[noteIndex % DEGREE_COLORS.length] : '';
 
                                                         return (
                                                             <div key={fret} className={`flex-1 flex justify-center relative z-20 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-10 pointer-events-none'}`}>
                                                                 {isInScale && (
-                                                                    <div onClick={() => playNote(sIdx, fret)} className={`w-8 h-8 rounded-full flex flex-col items-center justify-center text-white shadow-md transition-all hover:scale-125 cursor-pointer active:scale-95 ${dotColor} ${isRoot ? 'ring-2 ring-white z-30 scale-110' : ''}`} title={`Tocar ${note}`}>
+                                                                    <div onClick={() => playNote(sIdx, fret)} className={`w-8 h-8 rounded-full flex flex-col items-center justify-center text-white shadow-md transition-all hover:scale-125 cursor-pointer active:scale-95 ${dotColor} ${isRoot ? 'ring-4 ring-slate-900 dark:ring-white scale-115 z-30 font-black' : ''}`} title={`Tocar ${note}`}>
                                                                         <span className="text-xs font-bold leading-none">{note}</span>
                                                                         <span className="text-[8px] font-black opacity-80 mt-0.5 leading-none">{noteIndex + 1}º</span>
                                                                     </div>
@@ -1029,6 +1100,16 @@ const StudioLooper = () => {
                                         </div>
                                     ))}
                                     <div className="ml-2 text-brand-600 font-bold bg-brand-50 dark:bg-brand-900/20 px-3 py-1 rounded-lg">¡Haz clic en las notas para oírlas! 🔊</div>
+                                
+                                {/* Tarjeta didáctica e intuitiva para tus alumnos */}
+                                <div className="mt-6 p-4 bg-gradient-to-r from-indigo-500/10 to-brand-500/10 dark:from-indigo-900/20 dark:to-brand-900/20 border border-indigo-100 dark:border-indigo-800/60 rounded-2xl text-left">
+                                    <h4 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-2 mb-1.5">
+                                        💡 Tip Worship: Entendiendo las 5 Cajas
+                                    </h4>
+                                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                                        Las posiciones de la escala no se quedan en trastes fijos. Se mueven como un bloque completo. Observa cómo al cambiar de <b>Tonalidad</b> (ej: de A a G) las coordenadas de trastes en el selector de la <b>Zona del Mástil</b> cambian solas. Las notas con el <span className="inline-block w-4 h-4 rounded-full border-2 border-slate-900 dark:border-white align-middle mx-1 bg-red-500"></span> borde grueso son las <b>Tónicas</b> (la nota principal). ¡Úsalas como ancla para ubicar tu mano!
+                                    </p>
+                                </div>
                                 </div>
                             </div>
                         )}
